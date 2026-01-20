@@ -4,7 +4,11 @@
 # - Prepare chunks for Vector Store
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
+from langsmith import traceable
 from typing import List
+from dotenv import load_dotenv
+
+load_dotenv(override=False)
 
 class Chuncking():
     def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 100):
@@ -14,6 +18,7 @@ class Chuncking():
             separators=["\n\n", "\n", " ", ""]
         )
 
+    @traceable(name="Chunking Stage" , save_result=True , use_cache=True , run_type="tool")
     def chunk_file(self, pages:List[Document]) -> List[Document]:
         
         chunks = self.splitter.split_documents(pages)
