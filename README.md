@@ -144,7 +144,7 @@ OPENAI_API_KEY=...
 ### 3) Run the API
 
 ```bash
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 ```
 
 ---
@@ -189,14 +189,17 @@ When the pipeline is wired end-to-end, a good response contract is:
 
 ```text
 .
-├─ main.py
-├─ chroma/
-│  ├─ persistant.py
-│  └─ testing.py
-├─ dataIngestion/
+├─ app/
+│  ├─ api/          # Endpoints & dependencies
+│  ├─ core/         # Config & environment settings
+│  ├─ db/           # Database clients (Chroma, etc.)
+│  ├─ models/       # Pydantic schemas
+│  ├─ pipeline/     # Logic for Stages 1–7 (Ingestion, Graph, Retrieval)
+│  └─ main.py       # FastAPI entry point
+├─ data/            # Raw documents
+├─ logs/            # Application logs
 ├─ pyproject.toml
-├─ uv.lock
-└─ DataForge_nikhil24380.pdf
+└─ uv.lock
 ```
 
 ---

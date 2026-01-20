@@ -9,3 +9,9 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+#data files
+chroma_persistent_storage/
+.sqlite3
+*.db
+data/
