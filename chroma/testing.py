@@ -24,18 +24,3 @@ def basicQueryCollection(collection, query_texts, n_results):
         n_results=n_results
     )
     return results
-
-addDocumentsToCollection(
-    collections,
-    docs=["Hello world hello how are you nice to meet you hello once again and bye"],
-    metas=[{"lang": "en"}, {"lang": "fr"}, {"lang": "es"}],
-    ids=["1"]
-)
-
-results = basicQueryCollection(
-    collections,
-    query_texts=["Hello"], 
-    n_results=2
-)
-
-print(results)
