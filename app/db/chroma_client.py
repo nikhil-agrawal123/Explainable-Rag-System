@@ -7,7 +7,7 @@ from chromadb.config import Settings as ChromaSettings
 from app.core.config import settings
 from langsmith import traceable
 
-class ChromaDBClient:
+class ChromaClient:
     _instance = None
 
     @classmethod
@@ -29,4 +29,4 @@ class ChromaDBClient:
 
 # --- Dependency Injection for FastAPI ---
 def get_vector_db():
-    return ChromaDBClient.get_collection()
+    return ChromaClient.get_collection()

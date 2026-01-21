@@ -1,4 +1,4 @@
-from app.db.chroma_client import ChromaDBClient
+from app.db.chroma_client import ChromaClient
 from app.core.config import settings
 
-collection = ChromaDBClient.get_collection()
+collection = ChromaClient.get_collection()

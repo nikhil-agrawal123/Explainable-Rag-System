@@ -4,11 +4,24 @@
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![ChromaDB](https://img.shields.io/badge/Vector%20DB-ChromaDB-111111)](https://www.trychroma.com/)
+[![Ollama](https://img.shields.io/badge/Local%20LLM-Ollama-000000)](https://ollama.ai/)
+[![LangSmith](https://img.shields.io/badge/Tracing-LangSmith-1C3C3C)](https://smith.langchain.com/)
 [![License](https://img.shields.io/badge/License-TBD-lightgrey)](#license)
 
-An **explainable Retrieval-Augmented Generation (RAG)** pipeline designed to move from *“trust the model”* to *“here’s the exact evidence and reasoning trace.”*
+An **explainable Retrieval-Augmented Generation (RAG)** pipeline designed to move from *"trust the model"* to *"here's the exact evidence and reasoning trace."*
 
 This repo follows the pipeline described in **DataForge 2nd Round**: [DataForge_nikhil24380.pdf](DataForge_nikhil24380.pdf).
+
+---
+
+## Features
+
+- **Domain Classification** — Local LLM (Ollama + Qwen2.5) automatically classifies chunks by knowledge domain
+- **Entity & Relation Extraction** — SpaCy transformer model extracts entities and knowledge triples
+- **Chunking with Metadata** — LangChain text splitters with rich metadata preservation
+- **Vector Store** — ChromaDB persistent storage for embeddings
+- **Observability** — Full LangSmith tracing for debugging and transparency
+- **Explainable Output** — Evidence graphs, document contributions, and validation traces
 
 ---
 
@@ -32,15 +45,15 @@ This project’s goal is to output:
 
 ```mermaid
 flowchart TD
-	A[Documents] --> B[Stage 1: Chunking + metadata]
-	B --> C[Vector store]
-	D[User Query] --> E[Stage 2: Query decomposition]
-	E --> F[Stage 3: Multi-query retrieval]
-	F --> G[Hybrid retrieval + grader]
-	G --> H[Stage 4: Local evidence graph (triples)]
-	H --> I[Stage 5: Answer generation + validation]
-	I --> J[Stage 6: Document contribution scoring]
-	J --> K[Stage 7: User-visible explainable output]
+    A[Documents] --> B[Stage 1: Chunking + metadata]
+    B --> C[Vector store]
+    D[User Query] --> E[Stage 2: Query decomposition]
+    E --> F[Stage 3: Multi-query retrieval]
+    F --> G[Hybrid retrieval + grader]
+    G --> H[Stage 4: Local evidence graph]
+    H --> I[Stage 5: Answer generation + validation]
+    I --> J[Stage 6: Document contribution scoring]
+    J --> K[Stage 7: User-visible explainable output]
 ```
 
 ---
@@ -103,14 +116,22 @@ The response should include:
 
 ---
 
-## What’s currently in this repo
+## What's currently implemented
 
-- A Python project scaffold with FastAPI and vector DB dependencies.
-- Chroma examples:
-	- [chroma/persistant.py](chroma/persistant.py) uses `chromadb.PersistentClient`.
-	- [chroma/testing.py](chroma/testing.py) shows basic embedding + add/query patterns.
-
-Note: the end-to-end pipeline is described in the PDF and this repository is in an early scaffold phase.
+| Component | Status | Description |
+|-----------|--------|-------------|
+| **Chunking** | ✅ Done | `RecursiveCharacterTextSplitter` with configurable size/overlap |
+| **Metadata Extraction** | ✅ Done | SpaCy `en_core_web_trf` for entities + relation triples |
+| **Domain Classification** | ✅ Done | Ollama + Qwen2.5:7b local LLM classifier |
+| **Vector Store** | ✅ Done | ChromaDB persistent client with collection management |
+| **Pydantic Schemas** | ✅ Done | `ChunkRecord`, `ExtractedMetadata`, `Relation` models |
+| **LangSmith Tracing** | ✅ Done | `@traceable` decorators on all pipeline functions |
+| **API Endpoints** | 🚧 Scaffold | FastAPI routes defined, wiring in progress |
+| **Query Decomposition** | 🚧 Scaffold | Stage 2 placeholder |
+| **Retrieval + Grading** | 🚧 Scaffold | Stage 3 placeholder |
+| **Evidence Graph** | 🚧 Scaffold | Stage 4 placeholder |
+| **Answer Generation** | 🚧 Scaffold | Stage 5 placeholder |
+| **Document Scoring** | 🚧 Scaffold | Stage 6 placeholder |
 
 ---
 
@@ -133,23 +154,63 @@ pip install -U pip
 pip install -e .
 ```
 
-### 2) Configure environment variables
+### 2) Install SpaCy model
 
-Create a `.env` file in the repo root. Typical keys you may need:
+The metadata extractor requires the SpaCy transformer model:
 
-```ini
-OPENAI_API_KEY=...
+```bash
+python -m spacy download en_core_web_trf
 ```
 
-### 3) Run the API
+### 3) Install Ollama and pull the model
+
+Domain classification uses a local LLM via [Ollama](https://ollama.ai/):
+
+```bash
+# Install Ollama from https://ollama.ai/download
+# Then pull the model:
+ollama pull qwen2.5:7b
+```
+
+### 4) Configure environment variables
+
+Create a `.env` file in the repo root:
+
+```ini
+# LangSmith tracing (optional but recommended)
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=your_langsmith_api_key
+LANGCHAIN_PROJECT=explainable-rag
+
+# OpenAI (for embeddings/generation, if used)
+OPENAI_API_KEY=your_openai_key
+
+# Ollama model override (optional, defaults to qwen2.5:7b)
+OLLAMA_DOMAIN_MODEL=qwen2.5:7b
+```
+
+### 5) Run the API
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
+### 6) Test metadata extraction
+
+```bash
+python entity_domainTest.py
+```
+
+Example output:
+```
+Entities: {'Jakob Bernoulli', '1713', 'the Law of Large Numbers'}
+Relations: [Relation(subject='Jakob Bernoulli', predicate='introduce', object='Law')]
+Domain: Mathematics
+```
+
 ---
 
-## Proposed API response shape (recommended)
+## Proposed API response shape (under iterations)
 
 When the pipeline is wired end-to-end, a good response contract is:
 
@@ -192,26 +253,84 @@ When the pipeline is wired end-to-end, a good response contract is:
 ├─ app/
 │  ├─ api/          # Endpoints & dependencies
 │  ├─ core/         # Config & environment settings
-│  ├─ db/           # Database clients (Chroma, etc.)
-│  ├─ models/       # Pydantic schemas
-│  ├─ pipeline/     # Logic for Stages 1–7 (Ingestion, Graph, Retrieval)
+│  ├─ db/           # Database clients (ChromaDB)
+│  ├─ models/       # Pydantic schemas (ChunkRecord, Relation, etc.)
+│  ├─ pipeline/     # Logic for Stages 1–7
+│  │  ├─ chuncking.py         # Text splitting with LangChain
+│  │  ├─ metadata.py          # Entity/relation extraction (SpaCy)
+│  │  ├─ stage_1_ingestion.py # Document ingestion
+│  │  ├─ stage_2_decomposition.py
+│  │  ├─ stage_3_retrieval.py
+│  │  ├─ stage_4_local_graph.py
+│  │  ├─ stage_5_generation.py
+│  │  ├─ stage_6_scoring.py
+│  │  └─ orchestrator.py      # LangGraph pipeline orchestration
+│  ├─ utils/
+│  │  └─ llm.py     # Ollama domain classification
 │  └─ main.py       # FastAPI entry point
-├─ data/            # Raw documents
+├─ data/
+│  ├─ chroma_storage/  # Persistent vector DB
+│  └─ uploads/         # Uploaded documents
 ├─ logs/            # Application logs
+├─ test/            # Test files
 ├─ pyproject.toml
+├─ requirements.txt
 └─ uv.lock
+```
+
+---
+
+## Key Components
+
+### Domain Classification (`app/utils/llm.py`)
+
+Uses Ollama with Qwen2.5:7b to classify text into knowledge domains:
+
+```python
+from app.utils.llm import domain_classification
+
+domain = domain_classification("Einstein developed the theory of relativity.")
+# Returns: "Physics"
+```
+
+### Metadata Extraction (`app/pipeline/metadata.py`)
+
+Extracts entities and relations using SpaCy transformer model:
+
+```python
+from app.pipeline.metadata import MetadataExtractor
+
+extractor = MetadataExtractor()
+meta = extractor.extract_metadata("Jakob Bernoulli introduced the Law of Large Numbers in 1713.")
+# Returns: ExtractedMetadata(entities=[...], relations=[...], domain="Mathematics")
+```
+
+### Chunking (`app/pipeline/chuncking.py`)
+
+Splits documents into chunks with metadata preservation:
+
+```python
+from app.pipeline.chuncking import Chuncking
+
+chunker = Chuncking(chunk_size=1000, chunk_overlap=100)
+chunks = chunker.chunk_file(documents)
 ```
 
 ---
 
 ## Roadmap
 
-- Ingestion: chunking + evidence-aware metadata schema
-- Retrieval: multi-query decomposition + hybrid search + grading logs
-- Explainability: entity/relation extraction → local graph (triples)
-- Generation: answer constrained to evidence + claim validation
-- Scoring: document contribution and “unused source” explanations
-- UI: optional React dashboard to inspect evidence and reasoning trace
+- [x] Chunking with metadata schema
+- [x] Entity/relation extraction (SpaCy)
+- [x] Domain classification (Ollama local LLM)
+- [x] ChromaDB vector store integration
+- [x] LangSmith tracing
+- [ ] Wire ingestion pipeline end-to-end
+- [ ] Multi-query decomposition + hybrid search
+- [ ] Evidence graph construction (triples)
+- [ ] Answer generation constrained to evidence
+- [ ] Document contribution scoring
+- [ ] UI dashboard for evidence inspection
 
 ---
 
