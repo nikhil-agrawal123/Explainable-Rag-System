@@ -51,11 +51,9 @@ class ChunkRecord(BaseModel):
     source: str
     page_number: int
     
-    # We embed the rich metadata here
     metadata: ExtractedMetadata
 
     class Config:
-        # This allows Pydantic to work nicely with ORMs or dicts
         from_attributes = True
 
     def to_persistence_payload(self) -> dict:

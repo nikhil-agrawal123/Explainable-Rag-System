@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 load_dotenv(override=False)
 
 class Chuncking():
+    @traceable(name="Chuncking Init", run_type="tool", save_result=False, use_cache=False)
     def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 100):
         self.splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
