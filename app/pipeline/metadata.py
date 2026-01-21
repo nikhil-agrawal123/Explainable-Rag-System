@@ -1,11 +1,12 @@
 import spacy
-from app.n=models.schemas import Relation, ExtractedMetadata
+from app.models.schemas import Relation, ExtractedMetadata
 from langsmith import traceable
-from utils.llm import domain_classification
+from app.utils.llm import domain_classification
+from dotenv import load_dotenv
+
+load_dotenv(override=False)
 
 class MetadataExtractor:
-
-    @traceable(name="Metadata Extraction Stage", run_type="tool", save_result=True, use_cache=True)
     def __init__(self):
         print("Loading Spacy model for metadata extraction...")
         try:
@@ -23,7 +24,8 @@ class MetadataExtractor:
         found_entities = [ent.text for ent in doc.ents]
 
         #Local LLM call for domain classification
-        domain_guess = domain_classification(chunck)    
+        domain_guess = domain_classification(chunck)  
+        # domain_guess = "General Knowledge"  
 
         relations = []        
         # Iterating over verbs to find who did what
