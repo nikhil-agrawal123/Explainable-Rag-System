@@ -69,7 +69,6 @@ class ChunkRecord(BaseModel):
             "source": self.source,
             "page": self.page_number,
             "domain": self.metadata.domain,
-            # CRITICAL: Serialization happens right before DB insertion
             "entities": json.dumps(self.metadata.entities),
             "relations": json.dumps([r.to_list() for r in self.metadata.relations]) 
         }
