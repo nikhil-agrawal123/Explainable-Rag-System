@@ -1,5 +1,3 @@
-from sympy import content
-import ollama
 from langsmith import traceable
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
@@ -28,6 +26,6 @@ def domain_classification(text: str = None) -> str:
 
         ai_msg = llm.invoke(messages)
         return ai_msg.content
-    except ollama.OllamaError as e:
+    except Exception as e:
         print(f"Error during LLM invocation: {e}")
         return "Unknown"

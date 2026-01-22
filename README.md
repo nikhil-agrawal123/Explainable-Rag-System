@@ -6,7 +6,7 @@
 [![ChromaDB](https://img.shields.io/badge/Vector%20DB-ChromaDB-111111)](https://www.trychroma.com/)
 [![Ollama](https://img.shields.io/badge/Local%20LLM-Ollama-000000)](https://ollama.ai/)
 [![LangSmith](https://img.shields.io/badge/Tracing-LangSmith-1C3C3C)](https://smith.langchain.com/)
-[![License](https://img.shields.io/badge/License-TBD-lightgrey)](#license)
+[![License](https://img.shields.io/badge/License-MIT-lightgrey)](#license)
 
 An **explainable Retrieval-Augmented Generation (RAG)** pipeline designed to move from *"trust the model"* to *"here's the exact evidence and reasoning trace."*
 
@@ -16,12 +16,14 @@ This repo follows the pipeline described in **DataForge 2nd Round**: [DataForge_
 
 ## Features
 
+- **Local Embeddings** — Ollama + Qwen3-embedding:8b for high-quality 4096-dim embeddings (no API calls)
 - **Domain Classification** — Local LLM (Ollama + Qwen2.5) automatically classifies chunks by knowledge domain
 - **Entity & Relation Extraction** — SpaCy transformer model extracts entities and knowledge triples
 - **Chunking with Metadata** — LangChain text splitters with rich metadata preservation
 - **Vector Store** — ChromaDB persistent storage for embeddings
 - **Observability** — Full LangSmith tracing for debugging and transparency
 - **Explainable Output** — Evidence graphs, document contributions, and validation traces
+- **Fully Local** — No external API dependencies for core functionality (OpenAI optional)
 
 ---
 
@@ -123,6 +125,7 @@ The response should include:
 | **Chunking** | ✅ Done | `RecursiveCharacterTextSplitter` with configurable size/overlap |
 | **Metadata Extraction** | ✅ Done | SpaCy `en_core_web_trf` for entities + relation triples |
 | **Domain Classification** | ✅ Done | Ollama + Qwen2.5:7b local LLM classifier |
+| **Embeddings** | ✅ Done | Ollama + Qwen3-embedding:8b (4096 dimensions) |
 | **Vector Store** | ✅ Done | ChromaDB persistent client with collection management |
 | **Pydantic Schemas** | ✅ Done | `ChunkRecord`, `ExtractedMetadata`, `Relation` models |
 | **LangSmith Tracing** | ✅ Done | `@traceable` decorators on all pipeline functions |
@@ -162,15 +165,61 @@ The metadata extractor requires the SpaCy transformer model:
 python -m spacy download en_core_web_trf
 ```
 
-### 3) Install Ollama and pull the model
+### 3) Install Ollama and pull the required models
 
-Domain classification uses a local LLM via [Ollama](https://ollama.ai/):
+This project uses [Ollama](https://ollama.ai/) for local LLM inference. You need two models:
+- **qwen3-embedding:8b** — For generating embeddings (4096 dimensions)
+- **qwen2.5:7b** — For domain classification and text generation
+
+#### Install Ollama
+
+1. Download and install Ollama from [https://ollama.ai/download](https://ollama.ai/download)
+2. After installation, Ollama should run automatically in the system tray (Windows)
+
+#### Pull the required models
 
 ```bash
-# Install Ollama from https://ollama.ai/download
-# Then pull the model:
+# Embedding model (required for vector search)
+ollama pull qwen3-embedding:8b
+
+# LLM for domain classification and generation
 ollama pull qwen2.5:7b
 ```
+
+#### Verify Ollama is running
+
+```bash
+# Check Ollama status and list available models
+ollama list
+
+# Expected output:
+# NAME                  ID              SIZE
+# qwen3-embedding:8b    64b933495768    4.7 GB
+# qwen2.5:7b            845dbda0ea48    4.7 GB
+```
+
+#### Start Ollama server (if not running)
+
+On Windows, Ollama typically runs in the background via the system tray. If it's not running:
+
+```bash
+# Option 1: Start from Windows Start menu / System tray
+
+# Option 2: Start via command line
+ollama serve
+```
+
+#### Test the connection
+
+```bash
+# Test API connectivity
+curl http://localhost:11434/api/tags
+
+# Or run the test script
+python test_embed.py
+```
+
+> **Note:** The Ollama server must be running before starting the RAG system. The default endpoint is `http://localhost:11434`.
 
 ### 4) Configure environment variables
 
@@ -182,11 +231,13 @@ LANGCHAIN_TRACING_V2=true
 LANGCHAIN_API_KEY=your_langsmith_api_key
 LANGCHAIN_PROJECT=explainable-rag
 
-# OpenAI (for embeddings/generation, if used)
+# OpenAI (optional, not required if using Ollama for everything)
 OPENAI_API_KEY=your_openai_key
 
-# Ollama model override (optional, defaults to qwen2.5:7b)
+# Ollama configuration
+OLLAMA_HOST=http://localhost:11434
 OLLAMA_DOMAIN_MODEL=qwen2.5:7b
+OLLAMA_EMBEDDING_MODEL=qwen3-embedding:8b
 ```
 
 ### 5) Run the API
@@ -282,6 +333,17 @@ When the pipeline is wired end-to-end, a good response contract is:
 
 ## Key Components
 
+### Embeddings (`app/db/chroma_client.py`)
+
+Uses Ollama with Qwen3-embedding:8b for local embedding generation:
+
+```python
+from app.db.chroma_client import get_embedding_function
+
+embeddings = get_embedding_function(["Hello world", "Another text"])
+# Returns: List of 4096-dimensional vectors
+```
+
 ### Domain Classification (`app/utils/llm.py`)
 
 Uses Ollama with Qwen2.5:7b to classify text into knowledge domains:
@@ -318,6 +380,59 @@ chunks = chunker.chunk_file(documents)
 
 ---
 
+## Troubleshooting
+
+### Ollama Connection Errors
+
+If you see errors like:
+```
+ConnectionError: Failed to connect to Ollama
+[WinError 10061] No connection could be made because the target machine actively refused it
+```
+
+**Solutions:**
+
+1. **Check if Ollama is running:**
+   ```bash
+   ollama list
+   ```
+   If this fails, start Ollama from the system tray or run `ollama serve`
+
+2. **Check the Ollama API:**
+   ```bash
+   curl http://localhost:11434/api/tags
+   ```
+
+3. **Verify models are downloaded:**
+   ```bash
+   ollama list
+   # Should show qwen3-embedding:8b and qwen2.5:7b
+   ```
+
+4. **Re-pull models if needed:**
+   ```bash
+   ollama pull qwen3-embedding:8b
+   ollama pull qwen2.5:7b
+   ```
+
+### SpaCy Model Errors
+
+If you see errors about missing SpaCy models:
+```bash
+python -m spacy download en_core_web_trf
+```
+
+### ChromaDB Errors
+
+If you encounter ChromaDB issues, try resetting the database:
+```python
+from app.db.chroma_client import ChromaClient
+client = ChromaClient.get_instance()
+client.reset()  # Warning: This deletes all data
+```
+
+---
+
 ## Roadmap
 
 - [x] Chunking with metadata schema
@@ -345,5 +460,5 @@ See [DataForge_nikhil24380.pdf](DataForge_nikhil24380.pdf) and these starting po
 
 ## License
 
-TBD
+MIT
 

@@ -30,6 +30,11 @@ spacy>=3.7.0
 
 # --- Local LLM (Ollama) ---
 ollama>=0.4.0
+langchain-ollama>=0.2.0
+
+# --- Embeddings fallback ---
+langchain-huggingface>=0.1.0
+sentence-transformers>=2.2.0
 
 # --- Dev/test ---
 pytest>=8.0.0

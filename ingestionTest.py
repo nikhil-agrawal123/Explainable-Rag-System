@@ -1,5 +1,5 @@
 import asyncio
-# Point this to a real PDF on your computer
+
 TEST_FILE = "data/uploads/2017-ISWC-20170727.pdf" 
 
 from app.pipeline.stage_1_ingestion import IngestionPipeline
