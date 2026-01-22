@@ -1,40 +1,33 @@
+from sympy import content
 import ollama
 from langsmith import traceable
 from dotenv import load_dotenv
-import os
+from langchain_ollama import ChatOllama
+from langchain.messages import HumanMessage
+from langchain_core.messages import ChatMessage
 
 load_dotenv(override=False)
 
-@traceable(name="Domain Classification", run_type="tool", save_result=True, use_cache=True)
-def domain_classification(text: str) -> str:
-    model = "qwen2.5:7b"
-    prompt = (
-        "You are a professional domain classifier. Classify the following text into a single knowledge domain "
-        "(e.g., Computer Science, Mathematics, History). Return ONLY the domain name.\n\n"
-        f"{text}\n\nDomain:"
-    )
-    
+@traceable(name="LLM Invocation", run_type="llm", save_result=True, use_cache=True)
+def domain_classification(text: str = None) -> str:
+    llm = ChatOllama(model="qwen2.5:7b", temperature=0.0)
+
+    system_prompt = """
+        You are a helpful assistant. Your primary task is domain classification.
+        Given an input text, identify the domain(s) it belongs to.
+        Reply only with the domain name(s) and nothing else.
+        If the text belongs to multiple domains, return them in a list format.
+        Ensure the classification is accurate and concise.
+        """
+
     try:
-        response = ollama.chat(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0.0, "num_predict": 10},
-        )
+        messages = [
+            ChatMessage(role="assistant", content=system_prompt),
+            HumanMessage(content = text)
+        ]
 
-        content = response.message.content.strip()
-
-        if "Domain:" in content:
-            domain = content.split("Domain:")[-1].strip()
-        elif "domain:" in content:
-            domain = content.split("domain:")[-1].strip()
-        else:
-            lines = [l.strip() for l in content.splitlines() if l.strip()]
-            domain = lines[-1] if lines else "General Knowledge"
-
-        # Clean up any extra punctuation
-        domain = domain.strip('."\'')
-
-        return domain or "General Knowledge"
-    except Exception as e:
-        print(f"Error during domain classification: {e}")
-        return "General Knowledge"
+        ai_msg = llm.invoke(messages)
+        return ai_msg.content
+    except ollama.OllamaError as e:
+        print(f"Error during LLM invocation: {e}")
+        return "Unknown"
