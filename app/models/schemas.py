@@ -27,7 +27,7 @@ class ExtractedMetadata(BaseModel):
     """
     entities: List[str] = Field(default_factory=list, description="Key entities found in the chunk")
     relations: List[Relation] = Field(default_factory=list, description="Structured knowledge triples")
-    domain: str = Field(default="General", description="The knowledge domain (e.g., 'Probability Theory')")
+    domain: List[str] = Field(default_factory=lambda: ["General"], description="The knowledge domain (e.g., 'Probability Theory')")
 
 # --- 3. INGESTION MODELS (API Input/Output) ---
 class ProcessingStats(BaseModel):
@@ -68,7 +68,7 @@ class ChunkRecord(BaseModel):
             "chunk_id": self.chunk_id,
             "source": self.source,
             "page": self.page_number,
-            "domain": self.metadata.domain,
+            "domain": json.dumps(self.metadata.domain),
             "entities": json.dumps(self.metadata.entities),
             "relations": json.dumps([r.to_list() for r in self.metadata.relations]) 
         }

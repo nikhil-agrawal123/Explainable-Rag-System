@@ -1,3 +1,4 @@
+from typing import List
 from langsmith import traceable
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
@@ -7,7 +8,7 @@ from langchain_core.messages import ChatMessage
 load_dotenv(override=False)
 
 @traceable(name="LLM Invocation", run_type="llm", save_result=True, use_cache=True)
-def domain_classification(text: str = None) -> str:
+def domain_classification(text: str = None) -> List[str]:
     llm = ChatOllama(model="qwen2.5:7b", temperature=0.0)
 
     system_prompt = """
@@ -25,7 +26,7 @@ def domain_classification(text: str = None) -> str:
         ]
 
         ai_msg = llm.invoke(messages)
-        return ai_msg.content
+        return ai_msg.content.split(",") if ai_msg.content else []
     except Exception as e:
         print(f"Error during LLM invocation: {e}")
-        return "Unknown"
+        return []
