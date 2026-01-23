@@ -17,7 +17,6 @@ load_dotenv(override=False)
 
 class MultiQueryRetrievalPipeline:
     def __init__(self):
-        self.chroma_client = ChromaClient.get_instance()
         self.collection = ChromaClient.get_collection()
         self.decomposition_pipeline = QueryDecompositionPipeline()
 
@@ -43,7 +42,6 @@ class MultiQueryRetrievalPipeline:
 
                 # 3. RECONSTRUCT OBJECTS
                 try:
-                    # Parse domain - it's stored as JSON string in ChromaDB
                     domain_raw = raw_meta.get("domain", '["General"]')
                     if isinstance(domain_raw, str):
                         domain = json.loads(domain_raw)

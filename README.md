@@ -123,15 +123,17 @@ The response should include:
 | Component | Status | Description |
 |-----------|--------|-------------|
 | **Chunking** | ✅ Done | `RecursiveCharacterTextSplitter` with configurable size/overlap |
-| **Metadata Extraction** | ✅ Done | SpaCy `en_core_web_trf` for entities + relation triples |
+| **Metadata Extraction** | ✅ Done | SpaCy `en_core_web_trf` for entities + Ollama Qwen2.5:7b for relation extraction |
 | **Domain Classification** | ✅ Done | Ollama + Qwen2.5:7b local LLM classifier |
 | **Embeddings** | ✅ Done | Ollama + Qwen3-embedding:8b (4096 dimensions) |
 | **Vector Store** | ✅ Done | ChromaDB persistent client with collection management |
 | **Pydantic Schemas** | ✅ Done | `ChunkRecord`, `ExtractedMetadata`, `Relation` models |
 | **LangSmith Tracing** | ✅ Done | `@traceable` decorators on all pipeline functions |
-| **API Endpoints** | 🚧 Scaffold | FastAPI routes defined, wiring in progress |
-| **Query Decomposition** | 🚧 Scaffold | Stage 2 placeholder |
-| **Retrieval + Grading** | 🚧 Scaffold | Stage 3 placeholder |
+| **Document Ingestion** | ✅ Done | Stage 1 full pipeline with PDF processing |
+| **API Endpoints** | ✅ Done | FastAPI routes for `/ingest/` and `/query_decomposition/` |
+| **Query Decomposition** | ✅ Done | Stage 2 with Qwen2.5:7b breaking queries into 5 sub-queries |
+| **Relation Extraction** | ✅ Done | LLM-based subject-predicate-object triple extraction |
+| **Multi-Query Retrieval** | 🚧 In Progress | Stage 3 vector retrieval working, hybrid search pending |
 | **Evidence Graph** | 🚧 Scaffold | Stage 4 placeholder |
 | **Answer Generation** | 🚧 Scaffold | Stage 5 placeholder |
 | **Document Scoring** | 🚧 Scaffold | Stage 6 placeholder |
@@ -357,14 +359,25 @@ domain = domain_classification("Einstein developed the theory of relativity.")
 
 ### Metadata Extraction (`app/pipeline/metadata.py`)
 
-Extracts entities and relations using SpaCy transformer model:
+Extracts entities using SpaCy transformer model and relations using Ollama LLM:
 
 ```python
 from app.pipeline.metadata import MetadataExtractor
 
 extractor = MetadataExtractor()
 meta = extractor.extract_metadata("Jakob Bernoulli introduced the Law of Large Numbers in 1713.")
-# Returns: ExtractedMetadata(entities=[...], relations=[...], domain="Mathematics")
+# Returns: ExtractedMetadata(entities=[...], relations=[...], domain=["Mathematics"])
+```
+
+### Relation Extraction (`app/utils/llm.py`)
+
+Uses Ollama with Qwen2.5:7b to extract subject-predicate-object triples:
+
+```python
+from app.utils.llm import extract_relations
+
+relations = extract_relations("Einstein developed the theory of relativity.")
+# Returns: [["Einstein", "developed", "theory of relativity"]]
 ```
 
 ### Chunking (`app/pipeline/chuncking.py`)
@@ -440,8 +453,9 @@ client.reset()  # Warning: This deletes all data
 - [x] Domain classification (Ollama local LLM)
 - [x] ChromaDB vector store integration
 - [x] LangSmith tracing
-- [ ] Wire ingestion pipeline end-to-end
-- [ ] Multi-query decomposition + hybrid search
+- [x] Wire ingestion pipeline end-to-end
+- [x] Query decomposition (Stage 2)
+- [ ] Multi-query retrieval with hybrid search (Stage 3 - in progress)
 - [ ] Evidence graph construction (triples)
 - [ ] Answer generation constrained to evidence
 - [ ] Document contribution scoring
