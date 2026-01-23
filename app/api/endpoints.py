@@ -63,7 +63,12 @@ async def query_decomposition(query: str):
         else:
             decomposition_pipeline = QueryDecompositionPipeline()
             sub_queries = decomposition_pipeline.decompose_query(query)
-        return {"original_query": query, "sub_queries": sub_queries}
+        return {
+            "original_query": query,
+            "sub_queries": sub_queries,
+            "details": f"Decomposed into {len(sub_queries)} sub-queries.",
+            "status": "success"
+            }
 
     except Exception as e:
         return {"error": f"Invalid query input: {e}"}

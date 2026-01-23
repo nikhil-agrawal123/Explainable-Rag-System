@@ -5,6 +5,9 @@
 from langchain_ollama import ChatOllama
 from langchain.messages import AIMessage, HumanMessage
 from langsmith import traceable
+from dotenv import load_dotenv
+
+load_dotenv(override=False)
 
 message = []
 
