@@ -8,6 +8,7 @@ from langsmith import traceable
 
 message = []
 
+# Query Decomposition Pipeline
 class QueryDecompositionPipeline:
     def __init__(self):
         self.llm = ChatOllama(
@@ -58,10 +59,12 @@ class QueryDecompositionPipeline:
                     sub_query = line.split(".", 1)[1].strip() if "." in line else line
                     sub_queries.append(sub_query)
 
+            sub_queries.append(query)
+
             while len(sub_queries) < 5:
                 sub_queries.append("")
 
-            return sub_queries[:5]
+            return sub_queries
         except Exception as e:
             print(f"Error during query decomposition: {e}")
             return []
