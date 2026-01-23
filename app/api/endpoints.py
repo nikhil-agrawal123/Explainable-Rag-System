@@ -7,17 +7,12 @@ from typing import List
 from fastapi import APIRouter, UploadFile, File
 from app.core.config import settings
 from app.pipeline.stage_1_ingestion import IngestionPipeline
-from langsmith import traceable
-from dotenv import load_dotenv
-
-load_dotenv(override=False)
+from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
 
 router = APIRouter()
 
-@traceable(name="Ingest Documents Endpoint", run_type="api", save_result=False, use_cache=False)
 @router.post("/ingest/", summary="Upload and Process Multiple PDFs")
 async def ingest_documents(files: List[UploadFile] = File(...)):    
-    # Initialize the worker (loads models once)
     pipeline = IngestionPipeline()
     
     results = []
@@ -58,3 +53,12 @@ async def ingest_documents(files: List[UploadFile] = File(...)):
                 os.remove(temp_path)
 
     return {"job_summary": results}
+
+@router.post("/query_decomposition/", summary="Decompose User Query")
+async def query_decomposition(query: str):
+    # from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
+
+    decomposition_pipeline = QueryDecompositionPipeline()
+    sub_queries = decomposition_pipeline.decompose_query(query)
+
+    return {"original_query": query, "sub_queries": sub_queries}
