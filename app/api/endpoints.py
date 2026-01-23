@@ -56,9 +56,14 @@ async def ingest_documents(files: List[UploadFile] = File(...)):
 
 @router.post("/query_decomposition/", summary="Decompose User Query")
 async def query_decomposition(query: str):
-    # from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
 
-    decomposition_pipeline = QueryDecompositionPipeline()
-    sub_queries = decomposition_pipeline.decompose_query(query)
+    try:
+        if not query or len(query.strip()) == 0:
+            return {"error": "Query cannot be empty."}
+        else:
+            decomposition_pipeline = QueryDecompositionPipeline()
+            sub_queries = decomposition_pipeline.decompose_query(query)
+        return {"original_query": query, "sub_queries": sub_queries}
 
-    return {"original_query": query, "sub_queries": sub_queries}
+    except Exception as e:
+        return {"error": f"Invalid query input: {e}"}
