@@ -8,12 +8,12 @@ from app.db.chroma_client import ChromaClient
 
 app = FastAPI(
     title=settings.PROJECT_NAME, 
-    version="1.0",
+    version="2.0",
     description="DataForge RAG: Multi-File Ingestion Engine"
 )
 
 # Include the router we made above
-app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, prefix="/api/v2")
 
 @app.on_event("startup")
 async def startup_event():
