@@ -21,13 +21,14 @@ class QueryDecompositionPipeline:
 
         self.system_prompt = """
         You are an expert query decomposition agent in a Retrieval-Augmented Generation (RAG) pipeline.
-        Your task is to transform a user’s complex or ambiguous query into exactly five (5) simpler, self-contained sub-queries that together fully cover the original intent.
+        Your task is to transform a user’s complex or ambiguous query into exactly five or less simpler, self-contained sub-queries that together fully cover the original intent.
 
             1. Decomposition Rules:
             2 .Each sub-query must be clear, specific, and easy to understand on its own.
             3. Sub-queries should be retrieval-optimized:   
             4. Avoid vague language, pronouns, or implicit references.
             5. Prefer concrete terms that are likely to appear in documents.
+            6. Each sub-query must only be a small breakdown of the original query not going beyond its scope.
 
         Collectively, the five sub-queries must:
 
@@ -35,6 +36,7 @@ class QueryDecompositionPipeline:
             2. Cover different aspects, constraints, or dimensions of the problem.
             3. Do not introduce assumptions, opinions, or information not present in the original query.
             4. Do not answer the query, summarize documents, or explain your reasoning.
+            5. If possible, or the query is simple, you may return less number of sub-queries than five to optimize on the compute.
 
         Output Format:
 
@@ -63,9 +65,6 @@ class QueryDecompositionPipeline:
                     sub_queries.append(sub_query)
 
             sub_queries.append(query)
-
-            while len(sub_queries) < 5:
-                sub_queries.append("")
 
             return sub_queries
         except Exception as e:

@@ -130,11 +130,12 @@ The response should include:
 | **Pydantic Schemas** | ✅ Done | `ChunkRecord`, `ExtractedMetadata`, `Relation` models |
 | **LangSmith Tracing** | ✅ Done | `@traceable` decorators on all pipeline functions |
 | **Document Ingestion** | ✅ Done | Stage 1 full pipeline with PDF processing |
-| **API Endpoints** | ✅ Done | FastAPI routes for `/ingest/` and `/query_decomposition/` |
-| **Query Decomposition** | ✅ Done | Stage 2 with Qwen2.5:7b breaking queries into 5 sub-queries |
+| **API Endpoints** | ✅ Done | FastAPI routes for `/ingest/`, `/query/`, `/query_decomposition/`, `/extract_entities/`, `/extract_relations/`, `/visualize_graph/` |
+| **Query Decomposition** | ✅ Done | Stage 2 with Qwen2.5:7b breaking queries into ≤5 sub-queries |
 | **Relation Extraction** | ✅ Done | LLM-based subject-predicate-object triple extraction |
-| **Multi-Query Retrieval** | 🚧 In Progress | Stage 3 vector retrieval working, hybrid search pending |
-| **Evidence Graph** | 🚧 Scaffold | Stage 4 placeholder |
+| **Multi-Query Retrieval** | ✅ Done | Stage 3 vector retrieval with deduplication; hybrid search pending |
+| **Evidence Graph** | ✅ Done | Stage 4 NetworkX-based knowledge graph from retrieved chunks |
+| **Graph Visualization** | ✅ Done | Interactive 2D (PyVis) and 3D (Plotly) graph visualizations |
 | **Answer Generation** | 🚧 Scaffold | Stage 5 placeholder |
 | **Document Scoring** | 🚧 Scaffold | Stage 6 placeholder |
 
@@ -243,7 +244,7 @@ uvicorn app.main:app --reload
 ### 6) Test metadata extraction
 
 ```bash
-python entity_domainTest.py
+python test/entity_domainTest.py
 ```
 
 Example output:
@@ -252,6 +253,21 @@ Entities: {'Jakob Bernoulli', '1713', 'the Law of Large Numbers'}
 Relations: [Relation(subject='Jakob Bernoulli', predicate='introduce', object='Law')]
 Domain: Mathematics
 ```
+
+---
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/ingest/` | POST | Upload and process PDF documents |
+| `/api/v1/query/` | POST | Full RAG pipeline (decompose → retrieve → respond) |
+| `/api/v1/query_decomposition/` | POST | Break a query into sub-queries |
+| `/api/v1/extract_entities/` | POST | Extract named entities from text |
+| `/api/v1/extract_relations/` | POST | Extract subject-predicate-object triples |
+| `/api/v1/visualize_graph/` | POST | Generate interactive knowledge graph visualizations |
+
+Access the interactive API documentation at `http://localhost:8000/docs` after starting the server.
 
 ---
 
@@ -297,30 +313,35 @@ When the pipeline is wired end-to-end, a good response contract is:
 .
 ├─ app/
 │  ├─ api/          # Endpoints & dependencies
+│  │  ├─ endpoints.py        # API routes (/ingest, /query, /visualize_graph, etc.)
+│  │  └─ dependencies.py     # FastAPI dependencies
 │  ├─ core/         # Config & environment settings
+│  │  └─ config.py           # Pydantic settings management
 │  ├─ db/           # Database clients (ChromaDB)
+│  │  └─ chroma_client.py    # ChromaDB singleton + embedding function
 │  ├─ models/       # Pydantic schemas (ChunkRecord, Relation, etc.)
-│  ├─ pipeline/     # Logic for Stages 1–7
-│  │  ├─ chuncking.py         # Text splitting with LangChain
-│  │  ├─ metadata.py          # Entity/relation extraction (SpaCy)
-│  │  ├─ stage_1_ingestion.py # Document ingestion
-│  │  ├─ stage_2_decomposition.py
-│  │  ├─ stage_3_retrieval.py
-│  │  ├─ stage_4_local_graph.py
-│  │  ├─ stage_5_generation.py
-│  │  ├─ stage_6_scoring.py
-│  │  └─ orchestrator.py      # LangGraph pipeline orchestration
+│  │  └─ schemas.py          # Data models for the pipeline
+│  ├─ pipeline/     # Logic for Stages 1–6
+│  │  ├─ chuncking.py            # Text splitting with LangChain
+│  │  ├─ metadata.py             # Entity/relation/domain extraction
+│  │  ├─ stage_1_ingestion.py    # Document ingestion pipeline
+│  │  ├─ stage_2_decomposition.py # Query decomposition
+│  │  ├─ stage_3_retrieval.py    # Multi-query vector retrieval
+│  │  ├─ stage_4_local_graph.py  # Knowledge graph construction
+│  │  ├─ stage_5_generation.py   # Answer generation (WIP)
+│  │  └─ stage_6_scoring.py      # Document scoring (WIP)
 │  ├─ utils/
-│  │  └─ llm.py     # Ollama domain classification
+│  │  ├─ llm.py              # Ollama LLM utilities (domain, entities, relations)
+│  │  └─ visualizer.py       # 2D/3D graph visualization (PyVis + Plotly)
 │  └─ main.py       # FastAPI entry point
 ├─ data/
 │  ├─ chroma_storage/  # Persistent vector DB
 │  └─ uploads/         # Uploaded documents
+├─ lib/             # Frontend libraries (Vis.js, Tom Select)
 ├─ logs/            # Application logs
 ├─ test/            # Test files
-├─ pyproject.toml
 ├─ requirements.txt
-└─ uv.lock
+└─ README.md
 ```
 
 ---
@@ -383,6 +404,32 @@ chunker = Chuncking(chunk_size=1000, chunk_overlap=100)
 chunks = chunker.chunk_file(documents)
 ```
 
+### Knowledge Graph (`app/pipeline/stage_4_local_graph.py`)
+
+Builds a NetworkX graph from retrieved chunks with entities as nodes and relations as edges:
+
+```python
+from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
+
+graph_builder = KnowledgeGraphBuilder()
+graph = graph_builder.build_graph(chunks)
+context = graph_builder.get_relational_context()
+# Returns formatted triples: "(Subject) --[predicate]--> (Object) [Ref: chunk_id]"
+```
+
+### Graph Visualization (`app/utils/visualizer.py`)
+
+Creates interactive 2D (PyVis) and 3D (Plotly) visualizations:
+
+```python
+from app.utils.visualizer import GraphVisualizer
+
+viz = GraphVisualizer(graph)
+viz.prune_graph(min_edge_weight=1)
+viz.generate_2d_html("graph_2d.html")  # Interactive PyVis graph
+viz.generate_3d_html("graph_3d.html")  # 3D Plotly scatter plot
+```
+
 ---
 
 ## Troubleshooting
@@ -441,16 +488,18 @@ client.reset()  # Warning: This deletes all data
 ## Roadmap
 
 - [x] Chunking with metadata schema
-- [x] Entity/relation extraction (SpaCy)
+- [x] Entity/relation extraction (SpaCy + Ollama)
 - [x] Domain classification (Ollama local LLM)
 - [x] ChromaDB vector store integration
 - [x] LangSmith tracing
 - [x] Wire ingestion pipeline end-to-end
 - [x] Query decomposition (Stage 2)
-- [ ] Multi-query retrieval with hybrid search (Stage 3 - in progress)
-- [ ] Evidence graph construction (triples)
-- [ ] Answer generation constrained to evidence
-- [ ] Document contribution scoring
+- [x] Multi-query retrieval with deduplication (Stage 3)
+- [x] Evidence graph construction (Stage 4 - NetworkX)
+- [x] Interactive graph visualization (2D PyVis + 3D Plotly)
+- [ ] Hybrid search (vector + keyword) for Stage 3
+- [ ] Answer generation constrained to evidence (Stage 5)
+- [ ] Document contribution scoring (Stage 6)
 - [ ] UI dashboard for evidence inspection
 
 ---
