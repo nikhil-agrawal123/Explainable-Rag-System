@@ -10,6 +10,8 @@ from app.pipeline.stage_1_ingestion import IngestionPipeline
 from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
 from app.pipeline.stage_3_retrieval import MultiQueryRetrievalPipeline
 from app.utils.llm import extract_relations, extract_entities
+from app.utils.visualizer import GraphVisualizer
+from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
 
 router = APIRouter()
 
@@ -128,3 +130,29 @@ async def query_rag(query: str):
         }
     except Exception as e:
         return {"error": f"Error processing query: {e}"}
+
+@router.post("/visualize_graph/", summary="Visualize Knowledge Graph")
+async def visualize_graph(query: str):
+    retrieval_pipeline = MultiQueryRetrievalPipeline()
+    graph_builder = KnowledgeGraphBuilder()
+    decomposition_pipeline = QueryDecompositionPipeline()
+    sub_queries = decomposition_pipeline.decompose_query(query)
+    chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5)
+
+    graph_builder.build_graph(chunks)
+    viz = GraphVisualizer(graph_builder.graph)
+    viz.prune_graph(min_edge_weight=1)
+
+    path_2d = viz.generate_2d_html("query_graph_2d.html")
+    path_3d = viz.generate_3d_html("query_graph_3d.html")
+
+    return {
+        "relational_content": graph_builder.get_relational_context(),
+        "stats": {
+            "nodes": graph_builder.graph.number_of_nodes(),
+            "edges": graph_builder.graph.number_of_edges()
+        },
+        "2d_graph_path": os.path.abspath(path_2d),
+        "3d_graph_path": os.path.abspath(path_3d),
+        "status": "success"
+    }

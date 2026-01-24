@@ -1,12 +1,16 @@
 import networkx as nx
 from pyvis.network import Network
 import plotly.graph_objects as go
-import os
+from langsmith import traceable
+from dotenv import load_dotenv
+
+load_dotenv(override=False) 
 
 class GraphVisualizer:
     def __init__(self, graph: nx.MultiDiGraph):
         self.graph = graph
 
+    @traceable(name="Generate 2D Graph", run_type="tool", save_result=True, use_cache=True)
     def generate_2d_html(self, output_path: str = "graph_2d.html"):
         """
         Creates an interactive 2D physics graph using PyVis.
@@ -44,6 +48,7 @@ class GraphVisualizer:
         net.save_graph(output_path)
         return output_path
 
+    @traceable(name="Generate 3D Graph", run_type="tool", save_result=True, use_cache=True)
     def generate_3d_html(self, output_path: str = "graph_3d.html"):
         """
         Creates a 3D Scatter plot using Plotly.
@@ -105,3 +110,13 @@ class GraphVisualizer:
         
         fig.write_html(output_path)
         return output_path
+
+    @traceable(name="Prune Graph", run_type="tool", save_result=True, use_cache=True)
+    def prune_graph(self, min_edge_weight: int = 2):
+        """
+        Prune the graph by removing edges with weight less than min_edge_weight.
+        Also removes isolated nodes.
+        """
+        to_remove = [(u, v) for u, v, data in self.graph.edges(data=True) if data.get("weight", 1) < min_edge_weight]
+        self.graph.remove_edges_from(to_remove)
+        self.graph.remove_nodes_from(list(nx.isolates(self.graph)))

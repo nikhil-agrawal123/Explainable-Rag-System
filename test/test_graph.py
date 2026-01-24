@@ -1,6 +1,8 @@
 from app.models.schemas import ChunkRecord, ExtractedMetadata, Relation
+import networkx as nx
 from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
 from app.utils.visualizer import GraphVisualizer
+
 import os
 
 def main():
@@ -58,7 +60,6 @@ def main():
 
     # 4. Verify Multi-Hop Potential
     # Does a path exist from Bernoulli to 1713?
-    import networkx as nx
     try:
         path = nx.shortest_path(graph, "Jakob Bernoulli", "1713")
         print(f"\nPath found: {path}")

@@ -6,11 +6,12 @@ import networkx as nx
 from typing import List, Dict, Any
 from app.models.schemas import ChunkRecord
 from langsmith import traceable
+from dotenv import load_dotenv
+
+load_dotenv(override=False)
 
 class KnowledgeGraphBuilder:
     def __init__(self):
-        # We use a MultiDiGraph because two different documents might claim 
-        # the same relationship, and we want to keep BOTH pieces of evidence.
         self.graph = nx.MultiDiGraph()
 
     @traceable(name="Stage4_GraphConstruction", run_type="chain")
@@ -56,7 +57,9 @@ class KnowledgeGraphBuilder:
             context_lines.append(line)
             
         return "\n".join(context_lines)
-        
+
+
+    @traceable(name="Graph Stats", run_type="tool", save_result=True, use_cache=True)
     def get_graph_stats(self) -> Dict[str, Any]:
         """Returns simple stats for the API response"""
         return {
