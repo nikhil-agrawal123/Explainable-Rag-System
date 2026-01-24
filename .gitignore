@@ -15,3 +15,5 @@ chroma_persistent_storage/
 .sqlite3
 *.db
 data/
+*.html
+lib/
