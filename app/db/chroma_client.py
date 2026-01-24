@@ -11,32 +11,40 @@ from dotenv import load_dotenv
 
 load_dotenv(override=False)
 
-OLLAMA_MODEL = "qwen3-embedding:8b"  
+OLLAMA_MODEL = "qwen3-embedding:8b"
+BATCH_SIZE = 16  # Adjust based on your GPU memory
 
 class OllamaEmbeddingFunction(EmbeddingFunction):
-    """Custom embedding function using Ollama for ChromaDB."""
+    """Custom embedding function using Ollama for ChromaDB with batch processing."""
     
-    def __init__(self, model_name: str = OLLAMA_MODEL):
+    def __init__(self, model_name: str = OLLAMA_MODEL, batch_size: int = BATCH_SIZE):
         self.model_name = model_name
+        self.batch_size = batch_size
     
     def __call__(self, input: Documents) -> Embeddings:
-        embeddings = []
-        for text in input:
-            response = ollama.embed(model=self.model_name, input=text)
-            embeddings.append(response['embeddings'][0])
-        return embeddings
+        all_embeddings = []
+        
+        for i in range(0, len(input), self.batch_size):
+            batch = input[i:i + self.batch_size]
+            # Ollama supports batch embedding with a list of inputs
+            response = ollama.embed(model=self.model_name, input=batch)
+            all_embeddings.extend(response['embeddings'])
+        
+        return all_embeddings
 
 # Create a singleton instance
 embedding_function = OllamaEmbeddingFunction()
 
 @traceable(name="Generate_Embeddings", run_type="tool")
-def get_embedding_function(texts: list):
-    """Generate embeddings for a list of texts using Ollama Qwen3."""
-    embeddings = []
-    for text in texts:
-        response = ollama.embed(model=OLLAMA_MODEL, input=text)
-        embeddings.append(response['embeddings'][0])
-    return embeddings
+def get_embedding_function(texts: list, batch_size: int = BATCH_SIZE) -> list:
+    all_embeddings = []
+    
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        response = ollama.embed(model=OLLAMA_MODEL, input=batch)
+        all_embeddings.extend(response['embeddings'])
+    
+    return all_embeddings
 
 class ChromaClient:
     _instance = None
