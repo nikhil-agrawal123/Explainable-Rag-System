@@ -5,9 +5,9 @@
 
 #TODO implement hybrid search 
 
-from jsonschema._utils import uniq
 from app.db.chroma_client import ChromaClient   
 from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
+from app.pipeline.metadata import MetadataExtractor
 from langsmith import traceable
 from dotenv import load_dotenv
 from app.models.schemas import ChunkRecord, ExtractedMetadata, Relation
@@ -19,6 +19,7 @@ class MultiQueryRetrievalPipeline:
     def __init__(self):
         self.collection = ChromaClient.get_collection()
         self.decomposition_pipeline = QueryDecompositionPipeline()
+        self.metadata_extractor = MetadataExtractor()
 
     @traceable(name="Multi-Query Retrieval", run_type="tool", save_result=True, use_cache=True)
     def retrieve_documents(self, sub_queries: list[str], k_per_query: int) -> list[ChunkRecord]:
@@ -40,25 +41,7 @@ class MultiQueryRetrievalPipeline:
                 if chunk_id in unique_chunks:
                     continue
 
-                # 3. RECONSTRUCT OBJECTS
-                try:
-                    domain_raw = raw_meta.get("domain", '["General"]')
-                    if isinstance(domain_raw, str):
-                        domain = json.loads(domain_raw)
-                    else:
-                        domain = domain_raw if isinstance(domain_raw, list) else ["General"]
-                    
-                    rich_meta = ExtractedMetadata(
-                        domain=domain,
-                        entities=json.loads(raw_meta.get("entities", "[]")),
-                        relations=[
-                            Relation(subject=r[0], predicate=r[1], object=r[2]) 
-                            for r in json.loads(raw_meta.get("relations", "[]"))
-                        ]
-                    )
-                except Exception as e:
-                    print(f"Metadata Parse Error for {chunk_id}: {e}")
-                    rich_meta = ExtractedMetadata()
+                rich_meta = self.metadata_extractor.extract_metadata(doc_text)
 
                 # Build the Record
                 record = ChunkRecord(

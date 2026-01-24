@@ -144,14 +144,6 @@ The response should include:
 
 ### 1) Create environment and install dependencies
 
-This repo includes `uv.lock`. If you use `uv`:
-
-```bash
-uv sync
-```
-
-If you prefer plain venv + pip:
-
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
