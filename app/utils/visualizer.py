@@ -19,7 +19,6 @@ class GraphVisualizer:
         print(f"Generating 2D Graph: {output_path}")
         
         # 1. Convert to PyVis (needs a specific format)
-        # notebook=False means we are running a script, not Jupyter
         net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", directed=True)
         
         # 2. Add Nodes with Metadata colors
@@ -43,7 +42,6 @@ class GraphVisualizer:
             net.add_edge(u, v, title=hover_text, label=label, color="#aaaaaa")
 
         # 4. Save
-        # set_options enables the physics buttons so users can play with gravity
         net.force_atlas_2based()
         net.save_graph(output_path)
         return output_path
@@ -80,7 +78,6 @@ class GraphVisualizer:
         )
 
         # 4. Create Edge Traces (The Lines)
-        # Plotly 3D lines are tricky; we draw them one by one or as a single disjointed line
         edge_x, edge_y, edge_z = [], [], []
         
         for u, v in self.graph.edges():
@@ -110,13 +107,3 @@ class GraphVisualizer:
         
         fig.write_html(output_path)
         return output_path
-
-    @traceable(name="Prune Graph", run_type="tool", save_result=True, use_cache=True)
-    def prune_graph(self, min_edge_weight: int = 2):
-        """
-        Prune the graph by removing edges with weight less than min_edge_weight.
-        Also removes isolated nodes.
-        """
-        to_remove = [(u, v) for u, v, data in self.graph.edges(data=True) if data.get("weight", 1) < min_edge_weight]
-        self.graph.remove_edges_from(to_remove)
-        self.graph.remove_nodes_from(list(nx.isolates(self.graph)))

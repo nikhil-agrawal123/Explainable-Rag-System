@@ -67,3 +67,13 @@ class KnowledgeGraphBuilder:
             "edge_count": self.graph.number_of_edges(),
             "entities": list(self.graph.nodes())
         }
+
+    @traceable(name="Prune Graph", run_type="tool", save_result=True, use_cache=True)
+    def prune_graph(self, min_edge_weight: int = 2):
+        """
+        Prune the graph by removing edges with weight less than min_edge_weight.
+        Also removes isolated nodes.
+        """
+        to_remove = [(u, v) for u, v, data in self.graph.edges(data=True) if data.get("weight", 1) < min_edge_weight]
+        self.graph.remove_edges_from(to_remove)
+        self.graph.remove_nodes_from(list(nx.isolates(self.graph)))

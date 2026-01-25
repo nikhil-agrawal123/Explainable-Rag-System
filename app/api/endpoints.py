@@ -9,9 +9,10 @@ from app.core.config import settings
 from app.pipeline.stage_1_ingestion import IngestionPipeline
 from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
 from app.pipeline.stage_3_retrieval import MultiQueryRetrievalPipeline
+from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
+from app.pipeline.stage_5_generation import GenerationEngine
 from app.utils.llm import extract_relations, extract_entities
 from app.utils.visualizer import GraphVisualizer
-from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
 
 router = APIRouter()
 
@@ -156,3 +157,52 @@ async def visualize_graph(query: str):
         "3d_graph_path": os.path.abspath(path_3d),
         "status": "success"
     }
+
+@router.post("/full_pipeline/", summary="Run Full RAG Pipeline and Generate Answer")
+async def full_pipeline(query: str):
+    try:
+        if not query or len(query.strip()) == 0:
+            return {"error": "Query cannot be empty."}
+        
+        # Initialize Pipelines
+        decomposition_pipeline = QueryDecompositionPipeline()
+        retrieval_pipeline = MultiQueryRetrievalPipeline()
+        graph_builder = KnowledgeGraphBuilder()
+        generation_engine = GenerationEngine()
+        
+        # 1. Decompose Query
+        sub_queries = decomposition_pipeline.decompose_query(query)
+        
+        # 2. Retrieve Documents
+        chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5)
+        if not chunks:
+            return {"error": "No relevant information found for the query."}
+        
+        # 3. Build Knowledge Graph
+        kg = graph_builder.build_graph(chunks)
+        graph_builder.prune_graph(min_edge_weight=1)
+        graph_text = graph_builder.get_relational_context()
+
+        viz = GraphVisualizer(kg)
+        path2d = viz.generate_2d_html("full_pipeline_graph_2d.html")
+        path3d = viz.generate_3d_html("full_pipeline_graph_3d.html")
+        
+        # 4. Generate Answer
+        final_answer = generation_engine.generate_answer(query, chunks, graph_text)
+        
+        return {
+            "original_query": query,
+            "sub_queries": sub_queries,
+            "retrieved_chunks": [chunk.dict() for chunk in chunks],
+            "knowledge_graph_stats": {
+                "nodes": kg.number_of_nodes(),
+                "edges": kg.number_of_edges()
+            },
+            "final_answer": final_answer,
+            "2d_graph_path": os.path.abspath(path2d),
+            "3d_graph_path": os.path.abspath(path3d),
+            "status": "success"
+        }
+        
+    except Exception as e:
+        return {"error": f"Error in full pipeline: {e}"}
