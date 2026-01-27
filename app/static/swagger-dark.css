@@ -330,13 +330,27 @@ body {
 .swagger-ui input[type="search"],
 .swagger-ui input[type="email"],
 .swagger-ui input[type="file"],
-.swagger-ui textarea,
-.swagger-ui select {
+.swagger-ui textarea {
     background: var(--bg-primary) !important;
     color: var(--text-primary) !important;
     border: 1px solid var(--border) !important;
     border-radius: 4px !important;
     padding: 8px 12px !important;
+}
+
+.swagger-ui select {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 4px !important;
+    padding: 8px 30px 8px 12px !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e0e0e0' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+    background-size: 12px !important;
 }
 
 .swagger-ui input:focus,
@@ -350,10 +364,6 @@ body {
 .swagger-ui input::placeholder,
 .swagger-ui textarea::placeholder {
     color: var(--text-muted) !important;
-}
-
-.swagger-ui select {
-    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%23e0e0e0' d='M6 8l4 4 4-4'/%3E%3C/svg%3E") !important;
 }
 
 /* Buttons */
@@ -556,9 +566,9 @@ body {
 }
 
 .swagger-ui .servers > label select {
-    background: var(--bg-primary) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border) !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
 }
 
 .swagger-ui .servers-title {
@@ -603,8 +613,9 @@ body {
 }
 
 .swagger-ui .body-param-content-type select {
-    background: var(--bg-primary) !important;
-    color: var(--text-primary) !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
 }
 
 /* Highlighted row (active parameter) */
