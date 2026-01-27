@@ -11,6 +11,7 @@ from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
 from app.pipeline.stage_3_retrieval import MultiQueryRetrievalPipeline
 from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
 from app.pipeline.stage_5_generation import GenerationEngine
+from app.pipeline.stage_6_scoring import TrustScorer
 from app.utils.llm import extract_relations, extract_entities
 from app.utils.visualizer import GraphVisualizer
 
@@ -206,3 +207,33 @@ async def full_pipeline(query: str):
         
     except Exception as e:
         return {"error": f"Error in full pipeline: {e}"}
+
+@router.post("/score_trust/", summary="Calculate Trust Scores for Generated Answer")
+async def score_trust(query: str, final_answer: str):
+    try:
+        if not query or len(query.strip()) == 0:
+            return {"error": "Query cannot be empty."}
+        if not final_answer or len(final_answer.strip()) == 0:
+            return {"error": "Final answer cannot be empty."}
+        
+        # Retrieve relevant chunks first
+        decomposition_pipeline = QueryDecompositionPipeline()
+        retrieval_pipeline = MultiQueryRetrievalPipeline()
+        sub_queries = decomposition_pipeline.decompose_query(query)
+        chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5)
+        
+        if not chunks:
+            return {"error": "No relevant documents found to score trust."}
+        
+        scorer = TrustScorer()
+        trust_report = scorer.calculate_scores(chunks, final_answer)
+        
+        return {
+            "original_query": query,
+            "final_answer": final_answer,
+            "trust_report": trust_report,
+            "status": "success"
+        }
+        
+    except Exception as e:
+        return {"error": f"Error calculating trust scores: {e}"}
