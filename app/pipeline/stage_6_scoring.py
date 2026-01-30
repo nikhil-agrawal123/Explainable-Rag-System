@@ -17,7 +17,7 @@ class TrustScorer:
         """
         Analyzes the answer to quantify trust and document contribution.
         """
-        print("📊 Calculating Trust Scores...")
+        print("[Scoring] Calculating trust scores...")
 
         # 1. Identify Valid IDs
         valid_chunk_map = {c.chunk_id: c.document_id for c in retrieved_chunks}

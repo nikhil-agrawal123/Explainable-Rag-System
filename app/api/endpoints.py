@@ -13,11 +13,12 @@ from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
 from app.pipeline.stage_5_generation import GenerationEngine
 from app.pipeline.stage_6_scoring import TrustScorer
 from app.utils.llm import extract_relations, extract_entities
+from app.utils.audioIngestion import AudioIngestion
 from app.utils.visualizer import GraphVisualizer
 
 router = APIRouter()
 
-@router.post("/ingest/", summary="Upload and Process Multiple PDFs")
+@router.post("/ingest_pdf/", summary="Upload and Process Multiple PDFs")
 async def ingest_documents(files: List[UploadFile] = File(...)):    
     pipeline = IngestionPipeline()
     
@@ -59,6 +60,26 @@ async def ingest_documents(files: List[UploadFile] = File(...)):
                 os.remove(temp_path)
 
     return {"job_summary": results}
+
+@router.post("/ingest_audio/", summary="Upload and Process Audio File")
+async def ingest_audio(file: UploadFile = File(...)):
+    # 1. Validation
+    if not file.filename.endswith((".mp3", ".wav", ".m4a", ".flac")):
+        return {"file": file.filename, "status": "skipped", "reason": "Unsupported audio format"}
+
+    # 2. Save to Temp Disk
+    temp_path = os.path.join(settings.UPLOAD_DIR, file.filename)
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # 3. Transcribe Audio
+        audio_ingestion = AudioIngestion("large")
+        transcript = audio_ingestion.transcribe_audio(temp_path)
+        return {"file": file.filename, "status": "success", "transcript": transcript}
+    
+    except Exception as e:
+        return {"file": file.filename, "status": "failed", "error": str(e)}
 
 @router.post("/extract_entities/", summary="Extract Entities from Text Snippet")
 async def extract_entities_endpoint(text: str):

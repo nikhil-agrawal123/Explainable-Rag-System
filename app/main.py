@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.api.endpoints import router as api_router
 from app.db.chroma_client import ChromaClient
+import sys
 
 app = FastAPI(
     title=settings.PROJECT_NAME, 
@@ -59,3 +60,10 @@ async def startup_event():
 @app.get("/")
 def root():
     return {"message": "DataForge Server is Running. Go to /docs for the UI."}
+
+if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
