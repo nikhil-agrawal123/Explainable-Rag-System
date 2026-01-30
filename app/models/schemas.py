@@ -5,8 +5,6 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import json
 
-#TODO the metadata is not able to store the start and end time for audio chunks. Fix this.
-
 # --- 1. BASE STRUCTURES (The Building Blocks) ---
 class Relation(BaseModel):
     subject: str
