@@ -48,8 +48,13 @@ class MultiQueryRetrievalPipeline:
                     text=doc_text,
                     source=raw_meta.get("source", "unknown"),
                     page_number=raw_meta.get("page", 0),
+<<<<<<< HEAD
                     start_time=raw_meta.get("start_time"),  # Audio timestamps
                     end_time=raw_meta.get("end_time"),      # Audio timestamps
+=======
+                    start_time=raw_meta.get("start_time"),
+                    end_time=raw_meta.get("end_time"),
+>>>>>>> 8bd757f939b34634c07b328458f0154b06789b96
                     metadata=rich_meta
                 )
 
