@@ -93,9 +93,9 @@ class IngestionPipeline:
                 text=seg["text"],
                 source=file_name,
                 page_number=0,
-                start_time=seg["start"],
-                end_time=seg["end"],
-                metadata={}
+                start_time=float(seg["start"]),
+                end_time=float(seg["end"])
+                # metadata uses default ExtractedMetadata
             )
 
             ids_to_save.append(record.chunk_id)

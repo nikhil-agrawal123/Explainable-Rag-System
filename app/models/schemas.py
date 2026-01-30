@@ -5,8 +5,6 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import json
 
-#TODO the metadata is not able to store the start and end time for audio chunks. Fix this.
-
 # --- 1. BASE STRUCTURES (The Building Blocks) ---
 class Relation(BaseModel):
     subject: str
@@ -34,11 +32,11 @@ class ChunkRecord(BaseModel):
     document_id: str
     text: str
     source: str
-    page_number: int
+    page_number: int = 0
     start_time: Optional[float] = None
     end_time: Optional[float] = None 
     
-    metadata: ExtractedMetadata
+    metadata: ExtractedMetadata = Field(default_factory=ExtractedMetadata)
 
     class Config:
         from_attributes = True
