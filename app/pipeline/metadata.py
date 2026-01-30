@@ -27,5 +27,5 @@ class MetadataExtractor:
         return ExtractedMetadata(
             entities=set(found_entities),
             relations=relations,
-            domain=domain_guess  
+            domain=domain_guess,
         )
