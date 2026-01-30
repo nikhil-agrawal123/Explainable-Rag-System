@@ -13,7 +13,6 @@ from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
 from app.pipeline.stage_5_generation import GenerationEngine
 from app.pipeline.stage_6_scoring import TrustScorer
 from app.utils.llm import extract_relations, extract_entities
-from app.utils.audioIngestion import AudioIngestion
 from app.utils.visualizer import GraphVisualizer
 
 router = APIRouter()
@@ -74,7 +73,7 @@ async def ingest_audio(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
         
         # 3. Transcribe Audio
-        audio_ingestion = AudioIngestion("large")
+        audio_ingestion = IngestionPipeline()
         transcript = audio_ingestion.transcribe_audio(temp_path)
         return {"file": file.filename, "status": "success", "transcript": transcript}
     
