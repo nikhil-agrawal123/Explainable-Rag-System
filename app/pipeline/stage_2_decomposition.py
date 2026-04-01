@@ -6,6 +6,7 @@ from langchain_ollama import ChatOllama
 from langchain.messages import AIMessage, HumanMessage
 from langsmith import traceable
 from dotenv import load_dotenv
+from app.core.config import settings
 
 load_dotenv(override=False)
 
@@ -15,8 +16,9 @@ message = []
 class QueryDecompositionPipeline:
     def __init__(self):
         self.llm = ChatOllama(
-            model = "qwen2.5:7b",
-            temperature=0
+            model=settings.OLLAMA_DOMAIN_MODEL,
+            base_url=settings.OLLAMA_HOST,
+            temperature=0,
         )
 
         self.system_prompt = """

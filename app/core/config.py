@@ -27,10 +27,15 @@ class Settings(BaseSettings):
     LANGCHAIN_PROJECT: str = Field(default="dataforge")
 
     # LangSmith
-    LANGSMITH_TRACING: bool = Field(default=False)
+    LANGSMITH_TRACING: bool = Field(default=True)
     LANGSMITH_ENDPOINT: Optional[str] = Field(default=None)
-    LANGSMITH_API_KEY: Optional[str] = Field(default=None)
-    LANGSMITH_PROJECT: str = Field(default="dataforge")
+    LANGSMITH_API_KEY: Optional[str] = Field(default=os.getenv("LANGSMITH_API_KEY"))
+    LANGSMITH_PROJECT: str = Field(default=os.getenv("LANGSMITH_PROJECT"))
+
+    # Ollama (Local LLM)
+    OLLAMA_HOST: str = Field(default=os.getenv("OLLAMA_HOST"))
+    OLLAMA_DOMAIN_MODEL: str = Field(default="qwen3.5:9b")
+    OLLAMA_EMBEDDING_MODEL: str = Field(default="qwen3-embedding:8b")
 
     # OpenAI
     OPENAI_API_KEY: Optional[str] = Field(default=None)

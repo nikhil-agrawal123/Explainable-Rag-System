@@ -3,7 +3,6 @@
 # Include API routers
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.api.endpoints import router as api_router
 from app.db.chroma_client import ChromaClient
@@ -16,9 +15,6 @@ app = FastAPI(
     docs_url=None,  # Disable default docs
 )
 
-# Mount static files for custom CSS
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
 app.include_router(api_router, prefix="/api/v3")
 
 @app.get("/docs", include_in_schema=False)
@@ -29,7 +25,6 @@ async def custom_swagger_ui():
     <head>
         <title>{settings.PROJECT_NAME} - Docs</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
-        <link rel="stylesheet" href="/static/swagger-dark.css">
     </head>
     <body>
         <div id="swagger-ui"></div>

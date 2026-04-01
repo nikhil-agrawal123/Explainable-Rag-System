@@ -4,11 +4,16 @@ from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain.messages import HumanMessage
 from langchain_core.messages import ChatMessage
+from app.core.config import settings
 import json
 
 load_dotenv(override=False)
 
-llm = ChatOllama(model="qwen2.5:7b", temperature=0.0)
+llm = ChatOllama(
+    model=settings.OLLAMA_DOMAIN_MODEL,
+    base_url=settings.OLLAMA_HOST,
+    temperature=0.0,
+)
 
 
 @traceable(name="LLM Invocation", run_type="llm", save_result=True, use_cache=True)

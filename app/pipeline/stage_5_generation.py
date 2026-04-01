@@ -7,11 +7,17 @@ from langchain_core.output_parsers import StrOutputParser
 from langsmith import traceable
 from typing import List
 from app.models.schemas import ChunkRecord
+from app.core.config import settings
 
 class GenerationEngine:
-    def __init__(self, model_name: str = "qwen2.5:7b"):
+    def __init__(self, model_name: str = None):
+        model_name = model_name or settings.OLLAMA_DOMAIN_MODEL
         print(f"Loading Generator ({model_name})...")
-        self.llm = ChatOllama(model=model_name, temperature=0.1) # Low temp = factual
+        self.llm = ChatOllama(
+            model=model_name,
+            base_url=settings.OLLAMA_HOST,
+            temperature=0.1,
+        )
         
         # --- THE EVIDENCE PROMPT ---
         self.prompt = ChatPromptTemplate.from_messages([

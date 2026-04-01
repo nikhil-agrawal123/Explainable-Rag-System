@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv(override=False)
 
-OLLAMA_MODEL = "qwen3-embedding:8b"
+OLLAMA_MODEL = settings.OLLAMA_EMBEDDING_MODEL
 BATCH_SIZE = 16  # Adjust based on your GPU memory
 
 class OllamaEmbeddingFunction(EmbeddingFunction):
