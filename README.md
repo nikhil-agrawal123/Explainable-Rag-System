@@ -16,14 +16,14 @@ This repo follows the pipeline described in **DataForge 2nd Round**: [DataForge_
 
 ## Features
 
-- **Local Embeddings** — Ollama + Qwen3-embedding:8b for high-quality 4096-dim embeddings (no API calls)
-- **Domain Classification** — Local LLM (Ollama + Qwen2.5) automatically classifies chunks by knowledge domain
-- **Entity & Relation Extraction** — SpaCy transformer model extracts entities and knowledge triples
-- **Chunking with Metadata** — LangChain text splitters with rich metadata preservation
-- **Vector Store** — ChromaDB persistent storage for embeddings
-- **Observability** — Full LangSmith tracing for debugging and transparency
-- **Explainable Output** — Evidence graphs, document contributions, and validation traces
-- **Fully Local** — No external API dependencies for core functionality
+- **Local Embeddings** â€” Ollama + Qwen3-embedding:8b for high-quality 4096-dim embeddings (no API calls)
+- **Domain Classification** â€” Local LLM (Ollama + Qwen2.5) automatically classifies chunks by knowledge domain
+- **Entity & Relation Extraction** â€” SpaCy transformer model extracts entities and knowledge triples
+- **Chunking with Metadata** â€” LangChain text splitters with rich metadata preservation
+- **Vector Store** â€” ChromaDB persistent storage for embeddings
+- **Observability** â€” Full LangSmith tracing for debugging and transparency
+- **Explainable Output** â€” Evidence graphs, document contributions, and validation traces
+- **Fully Local** â€” No external API dependencies for core functionality
 
 ---
 
@@ -50,7 +50,7 @@ Download [Ollama](https://ollama.ai/download) and pull the models:
 
 ```bash
 ollama pull qwen3-embedding:8b
-ollama pull qwen2.5:7b
+ollama pull qwen3.5:9b
 ```
 
 ### 4) Configure environment variables
@@ -62,7 +62,7 @@ LANGCHAIN_TRACING_V2=true
 LANGCHAIN_API_KEY=your_langsmith_api_key
 LANGCHAIN_PROJECT=explainable-rag
 OLLAMA_HOST=http://localhost:11434
-OLLAMA_DOMAIN_MODEL=qwen2.5:7b
+OLLAMA_DOMAIN_MODEL=qwen3.5:9b
 OLLAMA_EMBEDDING_MODEL=qwen3-embedding:8b
 ```
 
@@ -120,7 +120,7 @@ ollama list
 
 # Verify models are downloaded
 ollama pull qwen3-embedding:8b
-ollama pull qwen2.5:7b
+ollama pull qwen3.5:9b
 ```
 
 ### SpaCy Model Errors
