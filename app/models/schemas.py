@@ -38,7 +38,7 @@ class ChunkRecord(BaseModel):
     
     metadata: ExtractedMetadata = Field(default_factory=ExtractedMetadata)
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
     def to_persistence_payload(self) -> dict:

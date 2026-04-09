@@ -48,13 +48,14 @@ def domain_classification(text: str = None) -> List[str]:
         ]
 
         ai_msg = llm.invoke(messages)
+        print(ai_msg.content)
         return ai_msg.content.split(",") if ai_msg.content else []
     except Exception as e:
         print(f"Error during LLM invocation: {e}")
         return []
 
 @traceable(name="Entity Extraction", run_type="llm", save_result=True, use_cache=True)
-def extract_entities(text: str) -> List[str]:
+def extract_entities(text: str):
     system_prompt = """You are an entity extraction assistant for a RAG system.
         Your task is to extract key entities from the given text.
 
@@ -95,7 +96,7 @@ def extract_entities(text: str) -> List[str]:
         return valid_entities
     except Exception as e:
         print(f"Error during entity extraction: {e}")
-        return []
+        return Exception("LLM invocation failed")
 
 @traceable(name="Relation Extraction", run_type="llm", save_result=True, use_cache=True)
 def extract_relations(text: str) -> List[List[str]]:

@@ -1,4 +1,3 @@
-
 # Explainable RAG System (DataForge Pipeline)
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
@@ -8,7 +7,7 @@
 [![LangSmith](https://img.shields.io/badge/Tracing-LangSmith-1C3C3C)](https://smith.langchain.com/)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey)](#license)
 
-An **explainable Retrieval-Augmented Generation (RAG)** pipeline designed to move from *"trust the model"* to *"here's the exact evidence and reasoning trace."*
+An **explainable Retrieval-Augmented Generation (RAG)** pipeline designed to move from _"trust the model"_ to _"here's the exact evidence and reasoning trace."_
 
 This repo follows the pipeline described in **DataForge 2nd Round**: [DataForge_nikhil24380.pdf](DataForge_nikhil24380.pdf).
 
@@ -78,15 +77,15 @@ Access the API docs at `http://localhost:8000/docs`
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v3/ingest/` | POST | Upload and process PDF documents |
-| `/api/v3/full_pipeline/` | POST | Full RAG pipeline (decompose -> retrieve -> graph -> generate) |
-| `/api/v3/score_trust/` | POST | Calculate trust scores for a generated answer |
-| `/api/v3/query_decomposition/` | POST | Break a query into sub-queries |
-| `/api/v3/extract_entities/` | POST | Extract named entities from text |
-| `/api/v3/extract_relations/` | POST | Extract subject-predicate-object triples |
-| `/api/v3/visualize_graph/` | POST | Generate interactive knowledge graph visualizations |
+| Endpoint                       | Method | Description                                                    |
+| ------------------------------ | ------ | -------------------------------------------------------------- |
+| `/api/v3/ingest/`              | POST   | Upload and process PDF documents                               |
+| `/api/v3/full_pipeline/`       | POST   | Full RAG pipeline (decompose -> retrieve -> graph -> generate) |
+| `/api/v3/score_trust/`         | POST   | Calculate trust scores for a generated answer                  |
+| `/api/v3/query_decomposition/` | POST   | Break a query into sub-queries                                 |
+| `/api/v3/extract_entities/`    | POST   | Extract named entities from text                               |
+| `/api/v3/extract_relations/`   | POST   | Extract subject-predicate-object triples                       |
+| `/api/v3/visualize_graph/`     | POST   | Generate interactive knowledge graph visualizations            |
 
 ---
 

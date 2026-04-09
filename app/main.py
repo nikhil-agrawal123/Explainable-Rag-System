@@ -12,35 +12,9 @@ app = FastAPI(
     title=settings.PROJECT_NAME, 
     version="3.0",
     description="DataForge RAG: Multi-File Ingestion Engine",
-    docs_url=None,  # Disable default docs
 )
 
 app.include_router(api_router, prefix="/api/v3")
-
-@app.get("/docs", include_in_schema=False)
-async def custom_swagger_ui():
-    return HTMLResponse(content=f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>{settings.PROJECT_NAME} - Docs</title>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
-    </head>
-    <body>
-        <div id="swagger-ui"></div>
-        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-        <script>
-            SwaggerUIBundle({{
-                url: "/openapi.json",
-                dom_id: '#swagger-ui',
-                presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
-                layout: "BaseLayout",
-                syntaxHighlight: {{ theme: "obsidian" }}
-            }});
-        </script>
-    </body>
-    </html>
-    """)
 
 @app.on_event("startup")
 async def startup_event():

@@ -121,7 +121,7 @@ def _fake_decomposition_init(self):
     self.llm = MagicMock()
 
 
-def _fake_generation_init(self, model_name="qwen2.5:7b"):
+def _fake_generation_init(self, model_name="qwen3.5:9b"):
     self.llm = MagicMock()
     self.prompt = MagicMock()
     self.chain = MagicMock()

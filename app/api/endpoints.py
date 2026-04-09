@@ -4,7 +4,7 @@
 import os
 import shutil
 from typing import List
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.core.config import settings
 from app.pipeline.stage_1_ingestion import IngestionPipeline
 from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
@@ -14,77 +14,99 @@ from app.pipeline.stage_5_generation import GenerationEngine
 from app.pipeline.stage_6_scoring import TrustScorer
 from app.utils.llm import extract_relations, extract_entities
 from app.utils.visualizer import GraphVisualizer
+import uuid
+import aiofiles
 
 router = APIRouter()
 
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
+ALLOWED_CONTENT_TYPES = {"application/pdf", "application/octet-stream"}
+
 @router.post("/ingest_pdf/", summary="Upload and Process Multiple PDFs")
-async def ingest_documents(files: List[UploadFile] = File(...)):    
+async def ingest_documents(files: List[UploadFile] = File(...)):
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
     pipeline = IngestionPipeline()
-    
     results = []
-    
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+
     print(f"Received {len(files)} files for ingestion.")
 
     for file in files:
-        # 1. Validation
-        if not file.filename.endswith(".pdf"):
-            results.append({"file": file.filename, "status": "skipped", "reason": "Not a PDF"})
+        raw_name = file.filename
+        base_name = os.path.basename(raw_name)
+
+        # --- Validation ---
+        if not base_name.lower().endswith(".pdf"):
+            results.append({"file": raw_name, "status": "skipped", "reason": "Not a PDF"})
             continue
 
-        # 2. Save to Temp Disk
-        temp_path = os.path.join(settings.UPLOAD_DIR, file.filename)
+        if file.content_type and file.content_type.lower() not in ALLOWED_CONTENT_TYPES:
+            results.append({"file": raw_name, "status": "skipped",
+                            "reason": f"Unsupported content-type: {file.content_type}"})
+            continue
+
+        contents = await file.read()
+
+        if len(contents) > MAX_FILE_SIZE:
+            results.append({"file": raw_name, "status": "skipped", "reason": "Exceeds 20MB limit"})
+            continue
+
+        # Unique temp path to avoid filename collisions
+        temp_path = os.path.join(settings.UPLOAD_DIR, f"{uuid.uuid4().hex}_{base_name}")
+
         try:
-            with open(temp_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            
-            # 3. Trigger the Pipeline
+            async with aiofiles.open(temp_path, "wb") as buffer:
+                await buffer.write(contents)
+
             process_stats = await pipeline.process_document(temp_path)
-            
-            results.append({
-                "file": file.filename,
-                "status": "success",
-                "details": process_stats
-            })
+            results.append({"file": raw_name, "status": "success", "details": process_stats})
 
         except Exception as e:
-            print(f"Error processing {file.filename}: {e}")
-            results.append({
-                "file": file.filename, 
-                "status": "failed", 
-                "error": str(e)
-            })
-        
+            print(f"Error processing {raw_name}: {e}")
+            results.append({"file": raw_name, "status": "failed", "error": str(e)})
+
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+            await file.close()
 
     return {"job_summary": results}
 
+
 @router.post("/ingest_audio/", summary="Upload and Process Audio File")
 async def ingest_audio(file: UploadFile = File(...)):
-    # 1. Validation
-    if not file.filename.endswith((".mp3", ".wav", ".m4a", ".flac")):
-        return {"file": file.filename, "status": "skipped", "reason": "Unsupported audio format"}
+    raw_name = file.filename or ""
+    safe_name = os.path.basename(raw_name)
 
-    # 2. Save to Temp Disk
-    temp_path = os.path.join(settings.UPLOAD_DIR, file.filename)
+    if not safe_name.lower().endswith((".mp3", ".wav", ".m4a", ".flac")):
+        return {"file": raw_name, "status": "skipped", "reason": "Unsupported audio format"}
+
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    temp_path = os.path.join(settings.UPLOAD_DIR, safe_name)
+
     try:
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
-        # 3. Transcribe Audio
+
         audio_ingestion = IngestionPipeline()
         transcript = audio_ingestion.transcribe_audio(temp_path)
-        return {"file": file.filename, "status": "success", "transcript": transcript}
-    
+        return {"file": raw_name, "status": "success", "transcript": transcript}
+
     except Exception as e:
-        return {"file": file.filename, "status": "failed", "error": str(e)}
+        return {"file": raw_name, "status": "failed", "error": str(e)}
+
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        await file.close()
 
 @router.post("/extract_entities/", summary="Extract Entities from Text Snippet")
 async def extract_entities_endpoint(text: str):
     try:
         if not text or len(text.strip()) == 0:
-            return {"error": "Input text cannot be empty."}
+            raise HTTPException(status_code=400, detail="Input text cannot be empty.")
         else:
             entities = extract_entities(text)
         return {
@@ -94,14 +116,16 @@ async def extract_entities_endpoint(text: str):
             "status": "success"
             }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": f"Error extracting entities: {e}"}
+        raise HTTPException(status_code=500, detail=f"Error extracting entities: {e}")
 
 @router.post("/extract_relations/", summary="Extract Relations from Text Snippet")
 async def extract_relations_endpoint(text: str):
     try:
         if not text or len(text.strip()) == 0:
-            return {"error": "Input text cannot be empty."}
+            raise HTTPException(status_code=400, detail="Input text cannot be empty.")
         else:
             relations = extract_relations(text)
         return {
@@ -110,16 +134,17 @@ async def extract_relations_endpoint(text: str):
             "details": f"Extracted {len(relations)} relations.",
             "status": "success"
             }
-
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": f"Error extracting relations: {e}"}
+        raise HTTPException(status_code=500, detail=f"Error extracting relations: {e}")
 
 @router.post("/query_decomposition/", summary="Decompose User Query")
 async def query_decomposition(query: str):
 
     try:
         if not query or len(query.strip()) == 0:
-            return {"error": "Query cannot be empty."}
+            raise HTTPException(status_code=400, detail="Query cannot be empty.")
         else:
             decomposition_pipeline = QueryDecompositionPipeline()
             sub_queries = decomposition_pipeline.decompose_query(query)
@@ -131,13 +156,13 @@ async def query_decomposition(query: str):
             }
 
     except Exception as e:
-        return {"error": f"Invalid query input: {e}"}
+        raise HTTPException(status_code=500, detail=f"Invalid query input: {e}")
 
 @router.post("/query/", summary="Process User Query through RAG Pipeline")
 async def query_rag(query: str):
     try:
         if not query or len(query.strip()) == 0:
-            return {"error": "Query cannot be empty."}
+            raise HTTPException(status_code=400, detail="Query cannot be empty.")
         else:
             retrieval_pipeline = MultiQueryRetrievalPipeline()
             decomposition_pipeline = QueryDecompositionPipeline()
@@ -146,12 +171,12 @@ async def query_rag(query: str):
         return {
             "original_query": query,
             "sub_queries": sub_queries,
-            "retrieved_chunks": [chunk.dict() for chunk in chunks],
+            "retrieved_chunks": [chunk.model_dump() for chunk in chunks],
             "details": f"Retrieved {len(chunks)} chunks from {len(sub_queries)} sub-queries.",
             "status": "success"
         }
     except Exception as e:
-        return {"error": f"Error processing query: {e}"}
+        raise HTTPException(status_code=500, detail=f"Error processing query: {e}")
 
 @router.post("/visualize_graph/", summary="Visualize Knowledge Graph")
 async def visualize_graph(query: str):
@@ -214,7 +239,7 @@ async def full_pipeline(query: str):
         return {
             "original_query": query,
             "sub_queries": sub_queries,
-            "retrieved_chunks": [chunk.dict() for chunk in chunks],
+            "retrieved_chunks": [chunk.model_dump() for chunk in chunks],
             "knowledge_graph_stats": {
                 "nodes": kg.number_of_nodes(),
                 "edges": kg.number_of_edges()
