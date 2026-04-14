@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv(override=False)
 
 class Chuncking():
-    @traceable(name="Chuncking Init", run_type="tool", save_result=False, use_cache=False)
+    @traceable(name="Chuncking Init", run_type="tool")
     def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 100):
         self.splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
@@ -19,7 +19,7 @@ class Chuncking():
             separators=["\n\n", "\n", " ", ""]
         )
 
-    @traceable(name="Chunking Stage" , save_result=True , use_cache=True , run_type="tool")
+    @traceable(name="Chunking Stage", run_type="tool")
     def chunk_file(self, pages:List[Document]) -> List[Document]:
         
         chunks = self.splitter.split_documents(pages)

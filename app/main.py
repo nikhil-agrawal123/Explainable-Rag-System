@@ -1,6 +1,8 @@
 # FastAPI entry point
 # Initialize App
 # Include API routers
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from app.core.config import settings
@@ -8,23 +10,30 @@ from app.api.endpoints import router as api_router
 from app.db.chroma_client import ChromaClient
 import sys
 
-app = FastAPI(
-    title=settings.PROJECT_NAME, 
-    version="3.0",
-    description="DataForge RAG: Multi-File Ingestion Engine",
-)
 
-app.include_router(api_router, prefix="/api/v3")
-
-@app.on_event("startup")
-async def startup_event():
-    """Check database connection on startup"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown lifecycle for the application."""
+    # ── Startup ──
     try:
         ChromaClient.get_instance()
         print(f"DataForge Server Online")
         print(f"   Storage: {settings.CHROMA_PERSIST_DIR}")
     except Exception as e:
         print(f"Critical Error: Database not accessible. {e}")
+    yield
+    # ── Shutdown (add cleanup here if needed) ──
+
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version="3.0",
+    description="DataForge RAG: Multi-File Ingestion Engine",
+    lifespan=lifespan,
+)
+
+app.include_router(api_router, prefix="/api/v3")
+
 
 @app.get("/")
 def root():

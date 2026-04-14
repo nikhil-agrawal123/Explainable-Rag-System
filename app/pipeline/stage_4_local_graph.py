@@ -59,7 +59,7 @@ class KnowledgeGraphBuilder:
         return "\n".join(context_lines)
 
 
-    @traceable(name="Graph Stats", run_type="tool", save_result=True, use_cache=True)
+    @traceable(name="Graph Stats", run_type="tool")
     def get_graph_stats(self) -> Dict[str, Any]:
         """Returns simple stats for the API response"""
         return {
@@ -68,7 +68,7 @@ class KnowledgeGraphBuilder:
             "entities": list(self.graph.nodes())
         }
 
-    @traceable(name="Prune Graph", run_type="tool", save_result=True, use_cache=True)
+    @traceable(name="Prune Graph", run_type="tool")
     def prune_graph(self, min_edge_weight: int = 2):
         """
         Prune the graph by removing edges with weight less than min_edge_weight.

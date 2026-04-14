@@ -1,12 +1,12 @@
 """
 Shared fixtures for API endpoint tests.
 
-Provides a patched FastAPI TestClient that mocks out all heavy
-dependencies (ChromaDB, Ollama, Whisper, LangSmith tracing) so
-tests run fast and without external services.
+Provides a patched FastAPI TestClient that mocks out ONLY external
+boundaries (Ollama LLM, ChromaDB, Whisper) so tests exercise real
+application logic while remaining fast and offline.
 """
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 
 
@@ -23,6 +23,15 @@ class FakeCollection:
     def add(self, ids, documents, metadatas):
         for i, cid in enumerate(ids):
             self._store[cid] = (documents[i], metadatas[i])
+
+    def upsert(self, ids, documents, metadatas):
+        """Same as add but overwrites existing entries (mirrors real ChromaDB)."""
+        for i, cid in enumerate(ids):
+            self._store[cid] = (documents[i], metadatas[i])
+
+    def get(self, where=None, limit=None, **kwargs):
+        """Minimal get() — returns empty results by default (no duplicates)."""
+        return {"ids": [], "documents": [], "metadatas": []}
 
     def query(self, query_texts, n_results, include=None):
         all_ids = list(self._store.keys())[:n_results]
@@ -51,94 +60,78 @@ class FakeChromaClient:
 
 
 # ---------------------------------------------------------------------------
-# Fake pipeline methods — deterministic, zero-cost replacements
+# Fake LLM — returns deterministic structured content
 # ---------------------------------------------------------------------------
 
-def _fake_decompose(self, query: str):
-    return [f"sub-query about {query}", query]
+class FakeAIMessage:
+    """Mimics langchain AIMessage with a .content attribute."""
+    def __init__(self, content: str):
+        self.content = content
 
 
-def _fake_retrieve(self, sub_queries, k_per_query=5):
-    from app.models.schemas import ChunkRecord, ExtractedMetadata, Relation
+class FakeLLM:
+    """
+    A deterministic fake LLM that returns structured responses based on
+    the prompt content. This allows real parsing logic to be tested.
+    """
+    def invoke(self, messages, **kwargs):
+        # Inspect the prompt to determine what kind of call this is
+        prompt_text = ""
+        for m in messages:
+            if hasattr(m, "content"):
+                prompt_text += m.content + "\n"
+            elif isinstance(m, tuple):
+                prompt_text += str(m[1]) + "\n"
 
-    return [
-        ChunkRecord(
-            chunk_id="TestDoc_CH0",
-            document_id="TestDoc",
-            text="The sun is a star at the center of the Solar System.",
-            source="test.pdf",
-            page_number=1,
-            metadata=ExtractedMetadata(
-                entities=["Sun", "Solar System"],
-                relations=[Relation(subject="Sun", predicate="is center of", object="Solar System")],
-                domain=["Astronomy"],
-            ),
-        ),
-        ChunkRecord(
-            chunk_id="TestDoc_CH1",
-            document_id="TestDoc",
-            text="Earth orbits the Sun once every 365.25 days.",
-            source="test.pdf",
-            page_number=2,
-            metadata=ExtractedMetadata(
-                entities=["Earth", "Sun"],
-                relations=[Relation(subject="Earth", predicate="orbits", object="Sun")],
-                domain=["Astronomy"],
-            ),
-        ),
-    ]
+        prompt_lower = prompt_text.lower()
+
+        # Query decomposition
+        if "decomposition" in prompt_lower or "sub-quer" in prompt_lower:
+            return FakeAIMessage(
+                "1. What are the fundamental concepts?\n"
+                "2. How do they relate to each other?\n"
+                "3. What are the practical applications?"
+            )
+
+        # Domain classification
+        if "domain classification" in prompt_lower:
+            return FakeAIMessage("Computer Science")
+
+        # Entity extraction
+        if "extract entities" in prompt_lower or "entity extraction" in prompt_lower:
+            return FakeAIMessage('[\"Entity_A\", \"Entity_B\", \"Entity_C\"]')
+
+        # Relation extraction
+        if "extract relations" in prompt_lower or "relation extraction" in prompt_lower or "knowledge extraction" in prompt_lower:
+            return FakeAIMessage(
+                '[[\"Entity_A\", \"relates_to\", \"Entity_B\"], '
+                '[\"Entity_B\", \"is_part_of\", \"Entity_C\"]]'
+            )
+
+        # Generation (answer)
+        if "dataforge" in prompt_lower and "evidence-based" in prompt_lower:
+            return FakeAIMessage(
+                "Based on the evidence, the answer involves key concepts "
+                "[TestDoc_CH0] and supported relationships [TestDoc_CH1]."
+            )
+
+        # Default
+        return FakeAIMessage("Default LLM response.")
 
 
-def _fake_generate(self, query, chunks, graph_summary):
-    return f"Generated answer for: {query} [TestDoc_CH0] [TestDoc_CH1]"
+_fake_llm_instance = FakeLLM()
 
 
-def _fake_extract_entities(text):
-    return ["Entity_A", "Entity_B"]
+def _get_fake_llm():
+    return _fake_llm_instance
 
 
-def _fake_extract_relations(text):
-    return [["Entity_A", "relates_to", "Entity_B"]]
-
+# ---------------------------------------------------------------------------
+# Fake transcription for audio tests
+# ---------------------------------------------------------------------------
 
 def _fake_transcribe(self, file_path):
     return {"status": "success", "doc_id": "audio_sample", "chunks": 2}
-
-
-def _fake_ingestion_init(self):
-    self.db_collection = FakeChromaClient.get_collection()
-    self.chunker = MagicMock()
-    self.model = MagicMock()
-
-
-def _fake_retrieval_init(self):
-    self.collection = FakeChromaClient.get_collection()
-    self.decomposition_pipeline = MagicMock()
-    self.metadata_extractor = MagicMock()
-
-
-def _fake_decomposition_init(self):
-    self.llm = MagicMock()
-
-
-def _fake_generation_init(self, model_name="qwen3.5:9b"):
-    self.llm = MagicMock()
-    self.prompt = MagicMock()
-    self.chain = MagicMock()
-
-
-def _fake_trust_scores(self, chunks, answer):
-    return {
-        "trust_metrics": {
-            "utilization_rate": "100.0%",
-            "total_citations": 2,
-            "hallucinations": 0,
-        },
-        "document_breakdown": [
-            {"document_id": "TestDoc", "citations": 2, "contribution_percent": 100.0}
-        ],
-        "verification_status": "HIGH",
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -148,24 +141,38 @@ def _fake_trust_scores(self, chunks, answer):
 @pytest.fixture(scope="session")
 def test_client():
     """
-    Create a TestClient with all heavy backends mocked out.
-    Session-scoped so the app is only built once for the full test run.
+    Create a TestClient with external boundaries mocked.
+    
+    What IS mocked (external services):
+      - ChromaDB client/collection → FakeCollection (in-memory)
+      - Ollama LLM → FakeLLM (deterministic responses)
+      - Ollama embeddings → MagicMock
+      - Whisper transcription → fake return value
+    
+    What is NOT mocked (real logic that gets tested):
+      - Query decomposition parsing (stage_2)
+      - Entity/relation extraction JSON parsing (llm.py)
+      - Knowledge graph construction (stage_4)
+      - Trust scoring & citation extraction (stage_6)
+      - Generation prompt assembly (stage_5)
+      - All FastAPI routing and validation
     """
     with (
+        # External boundary: ChromaDB
         patch("app.db.chroma_client.ChromaClient", FakeChromaClient),
         patch("app.db.chroma_client.embedding_function", MagicMock()),
         patch("app.db.chroma_client.ollama", MagicMock()),
-        patch("app.pipeline.stage_1_ingestion.IngestionPipeline.__init__", _fake_ingestion_init),
-        patch("app.pipeline.stage_1_ingestion.IngestionPipeline.transcribe_audio", _fake_transcribe),
-        patch("app.pipeline.stage_2_decomposition.QueryDecompositionPipeline.__init__", _fake_decomposition_init),
-        patch("app.pipeline.stage_2_decomposition.QueryDecompositionPipeline.decompose_query", _fake_decompose),
-        patch("app.pipeline.stage_3_retrieval.MultiQueryRetrievalPipeline.__init__", _fake_retrieval_init),
-        patch("app.pipeline.stage_3_retrieval.MultiQueryRetrievalPipeline.retrieve_documents", _fake_retrieve),
-        patch("app.pipeline.stage_5_generation.GenerationEngine.__init__", _fake_generation_init),
-        patch("app.pipeline.stage_5_generation.GenerationEngine.generate_answer", _fake_generate),
-        patch("app.pipeline.stage_6_scoring.TrustScorer.calculate_scores", _fake_trust_scores),
-        patch("app.utils.llm.extract_entities", _fake_extract_entities),
-        patch("app.utils.llm.extract_relations", _fake_extract_relations),
+        # External boundary: Ollama LLM — use FakeLLM via get_llm()
+        patch("app.utils.llm.get_llm", _get_fake_llm),
+        patch("app.utils.llm._llm", _fake_llm_instance),
+        # External boundary: Whisper audio model
+        patch(
+            "app.pipeline.stage_1_ingestion.IngestionPipeline.transcribe_audio",
+            _fake_transcribe,
+        ),
+        # Patch ChromaClient in modules that import it directly
+        patch("app.pipeline.stage_1_ingestion.ChromaClient", FakeChromaClient),
+        patch("app.pipeline.stage_3_retrieval.ChromaClient", FakeChromaClient),
     ):
         from app.main import app
 

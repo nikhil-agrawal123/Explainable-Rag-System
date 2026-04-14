@@ -2,28 +2,22 @@
 # - Break complex query into sub-queries
 # - Domain mapping
 
-from langchain_ollama import ChatOllama
-from langchain.messages import AIMessage, HumanMessage
+from langchain.messages import HumanMessage
 from langsmith import traceable
 from dotenv import load_dotenv
-from app.core.config import settings
+from app.utils.llm import get_llm
 
 load_dotenv(override=False)
 
-message = []
 
 # Query Decomposition Pipeline
 class QueryDecompositionPipeline:
     def __init__(self):
-        self.llm = ChatOllama(
-            model=settings.OLLAMA_DOMAIN_MODEL,
-            base_url=settings.OLLAMA_HOST,
-            temperature=0,
-        )
+        self.llm = get_llm()
 
         self.system_prompt = """
         You are an expert query decomposition agent in a Retrieval-Augmented Generation (RAG) pipeline.
-        Your task is to transform a user’s complex or ambiguous query into exactly five or less simpler, self-contained sub-queries that together fully cover the original intent.
+        Your task is to transform a user's complex or ambiguous query into exactly five or less simpler, self-contained sub-queries that together fully cover the original intent.
 
             1. Decomposition Rules:
             2 .Each sub-query must be clear, specific, and easy to understand on its own.
@@ -48,11 +42,10 @@ class QueryDecompositionPipeline:
             4. Your output will be directly used for document retrieval. Precision and clarity are critical.
         """
 
-    @traceable(name="Decompose Query", run_type="tool", save_result=True, use_cache=True)
+    @traceable(name="Decompose Query", run_type="tool")
     def decompose_query(self, query: str) -> list:
         messages = [
-            AIMessage(content=self.system_prompt),
-            HumanMessage(content=query)
+            HumanMessage(content=f"{self.system_prompt}\n\n{query}")
         ]
 
         try:

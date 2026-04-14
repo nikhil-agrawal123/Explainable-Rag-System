@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 from langsmith import traceable
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
@@ -9,14 +9,41 @@ import json
 
 load_dotenv(override=False)
 
-llm = ChatOllama(
-    model=settings.OLLAMA_DOMAIN_MODEL,
-    base_url=settings.OLLAMA_HOST,
-    temperature=0.0,
-)
+# Lazy LLM singleton — created on first use, not at import time,
+# so tests can mock it without needing a running Ollama server.
+_llm = None
 
 
-@traceable(name="LLM Invocation", run_type="llm", save_result=True, use_cache=True)
+def get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatOllama(
+            model=settings.OLLAMA_DOMAIN_MODEL,
+            base_url=settings.OLLAMA_HOST,
+            temperature=0.0,
+        )
+    return _llm
+
+
+def _extract_json_payload(raw_content: Any) -> str:
+    if raw_content is None:
+        return ""
+
+    response = str(raw_content).strip()
+    if not response:
+        return ""
+
+    if response.startswith("```"):
+        parts = response.split("```")
+        if len(parts) >= 2:
+            response = parts[1].strip()
+        if response.lower().startswith("json"):
+            response = response[4:].strip()
+
+    return response.strip()
+
+
+@traceable(name="LLM Invocation", run_type="llm")
 def domain_classification(text: str = None) -> List[str]:
 
     system_prompt = """You are a domain classification assistant for a RAG system.
@@ -47,14 +74,14 @@ def domain_classification(text: str = None) -> List[str]:
             HumanMessage(content = text)
         ]
 
-        ai_msg = llm.invoke(messages)
+        ai_msg = get_llm().invoke(messages)
         print(ai_msg.content)
         return ai_msg.content.split(",") if ai_msg.content else []
     except Exception as e:
         print(f"Error during LLM invocation: {e}")
         return []
 
-@traceable(name="Entity Extraction", run_type="llm", save_result=True, use_cache=True)
+@traceable(name="Entity Extraction", run_type="llm")
 def extract_entities(text: str):
     system_prompt = """You are an entity extraction assistant for a RAG system.
         Your task is to extract key entities from the given text.
@@ -76,15 +103,11 @@ def extract_entities(text: str):
             HumanMessage(content=f"Extract entities from:\n{text}")
         ]
 
-        ai_msg = llm.invoke(messages)
-        response = ai_msg.content.strip()
-        
-        if response.startswith("```"):
-            response = response.split("```")[1]
-            if response.startswith("json"):
-                response = response[4:]
-        response = response.strip()
-        
+        ai_msg = get_llm().invoke(messages)
+        response = _extract_json_payload(getattr(ai_msg, "content", ""))
+        if not response:
+            return []
+
         entities = json.loads(response)
         
         # Validate structure: list of strings
@@ -96,9 +119,9 @@ def extract_entities(text: str):
         return valid_entities
     except Exception as e:
         print(f"Error during entity extraction: {e}")
-        return Exception("LLM invocation failed")
+        return []
 
-@traceable(name="Relation Extraction", run_type="llm", save_result=True, use_cache=True)
+@traceable(name="Relation Extraction", run_type="llm")
 def extract_relations(text: str) -> List[List[str]]:
     system_prompt = """You are a knowledge extraction assistant for a RAG system.
         Your task is to extract subject-predicate-object triples from the given text.
@@ -122,17 +145,12 @@ def extract_relations(text: str) -> List[List[str]]:
             HumanMessage(content=f"Extract relations from:\n{text}")
         ]
 
-        ai_msg = llm.invoke(messages)
-        response = ai_msg.content.strip()
-        
-        # Parse JSON response
-        import json
-        if response.startswith("```"):
-            response = response.split("```")[1]
-            if response.startswith("json"):
-                response = response[4:]
-        response = response.strip()
-        
+        ai_msg = get_llm().invoke(messages)
+        print(ai_msg.content)
+        response = _extract_json_payload(getattr(ai_msg, "content", ""))
+        if not response:
+            return []
+
         relations = json.loads(response)
         
         # Validate structure: list of [subject, predicate, object]

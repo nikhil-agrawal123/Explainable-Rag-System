@@ -1,23 +1,17 @@
 # Stage 5: Answer generation and validation
 # - LLM Generation (constrained by Evidence Graph)
 # - Claim validation against evidence
-from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langsmith import traceable
 from typing import List
 from app.models.schemas import ChunkRecord
-from app.core.config import settings
+from app.utils.llm import get_llm
 
 class GenerationEngine:
     def __init__(self, model_name: str = None):
-        model_name = model_name or settings.OLLAMA_DOMAIN_MODEL
-        print(f"Loading Generator ({model_name})...")
-        self.llm = ChatOllama(
-            model=model_name,
-            base_url=settings.OLLAMA_HOST,
-            temperature=0.1,
-        )
+        print(f"Loading Generator...")
+        self.llm = get_llm()
         
         # --- THE EVIDENCE PROMPT ---
         self.prompt = ChatPromptTemplate.from_messages([

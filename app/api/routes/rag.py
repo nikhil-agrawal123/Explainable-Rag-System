@@ -42,8 +42,8 @@ async def visualize_graph(query: str):
     chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5)
 
     graph_builder.build_graph(chunks)
+    graph_builder.prune_graph(min_edge_weight=1)
     viz = GraphVisualizer(graph_builder.graph)
-    viz.prune_graph(min_edge_weight=1)
 
     path_2d = viz.generate_2d_html("query_graph_2d.html")
     path_3d = viz.generate_3d_html("query_graph_3d.html")

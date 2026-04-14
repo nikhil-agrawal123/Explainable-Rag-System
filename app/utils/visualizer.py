@@ -10,7 +10,7 @@ class GraphVisualizer:
     def __init__(self, graph: nx.MultiDiGraph):
         self.graph = graph
 
-    @traceable(name="Generate 2D Graph", run_type="tool", save_result=True, use_cache=True)
+    @traceable(name="Generate 2D Graph", run_type="tool")
     def generate_2d_html(self, output_path: str = "graph_2d.html"):
         """
         Creates an interactive 2D physics graph using PyVis.
@@ -23,7 +23,6 @@ class GraphVisualizer:
         
         # 2. Add Nodes with Metadata colors
         for node, attrs in self.graph.nodes(data=True):
-            # Color code by domain if available
             color = "#00ff41" # Matrix Green default
             if attrs.get("domain") == "Mathematics":
                 color = "#ff9900" # Orange
@@ -34,9 +33,7 @@ class GraphVisualizer:
 
         # 3. Add Edges with Labels
         for u, v, data in self.graph.edges(data=True):
-            # The label is the 'predicate' (e.g., "wrote", "studied")
             label = data.get("relation", "")
-            # Tooltip shows the source document
             hover_text = f"Source: {data.get('source')} (ID: {data.get('chunk_id')})"
             
             net.add_edge(u, v, title=hover_text, label=label, color="#aaaaaa")
@@ -46,7 +43,7 @@ class GraphVisualizer:
         net.save_graph(output_path)
         return output_path
 
-    @traceable(name="Generate 3D Graph", run_type="tool", save_result=True, use_cache=True)
+    @traceable(name="Generate 3D Graph", run_type="tool")
     def generate_3d_html(self, output_path: str = "graph_3d.html"):
         """
         Creates a 3D Scatter plot using Plotly.

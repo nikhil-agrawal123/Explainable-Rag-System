@@ -9,7 +9,7 @@ class MetadataExtractor:
     def __init__(self):
         pass
 
-    @traceable(name="Extract Metadata", run_type="tool", save_result=True, use_cache=True)
+    @traceable(name="Extract Metadata", run_type="tool")
     def extract_metadata(self, chunck: str) -> ExtractedMetadata:
 
         found_entities = extract_entities(chunck)
@@ -25,7 +25,7 @@ class MetadataExtractor:
         ]
 
         return ExtractedMetadata(
-            entities=set(found_entities),
+            entities=list(set(found_entities)),
             relations=relations,
             domain=domain_guess,
         )

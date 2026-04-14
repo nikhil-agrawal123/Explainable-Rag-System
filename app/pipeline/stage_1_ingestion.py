@@ -30,7 +30,16 @@ class IngestionPipeline:
         safe = re.sub(r"[^a-zA-Z0-9_-]+", "_", stem).strip("_")
         return safe or "document"
 
-    @traceable(name="Ingest Document", run_type="tool", save_result=True, use_cache=True)
+    def _load_pdf_safe(self, file_path: str):
+        """Load PDF pages using PyPDFLoader. Returns a list of Document objects."""
+        try:
+            loader = PyPDFLoader(file_path)
+            return loader.load()
+        except Exception as e:
+            print(f"Error loading PDF {file_path}: {e}")
+            return []
+
+    @traceable(name="Ingest Document", run_type="tool")
     async def process_document(self, file_path: str):
         filename = os.path.basename(file_path)
         doc_id = self._safe_doc_id(filename)
@@ -92,7 +101,7 @@ class IngestionPipeline:
         print(f"Saved {len(ids_to_save)} chunks for {doc_id}.")
         return {"status": "success", "doc_id": doc_id, "chunks": len(ids_to_save)}
 
-    @traceable(name="Process Audio file", run_type="tool", save_result=True)
+    @traceable(name="Process Audio file", run_type="tool")
     def transcribe_audio(self, file_path: str) -> dict:
         model = self._get_audio_model()
         results = model.transcribe(file_path)

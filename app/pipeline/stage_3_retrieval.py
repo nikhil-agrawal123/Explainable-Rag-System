@@ -20,7 +20,7 @@ class MultiQueryRetrievalPipeline:
         self.decomposition_pipeline = QueryDecompositionPipeline()
         self.metadata_extractor = MetadataExtractor()
 
-    @traceable(name="Multi-Query Retrieval", run_type="tool", save_result=True, use_cache=True)
+    @traceable(name="Multi-Query Retrieval", run_type="tool")
     def retrieve_documents(self, sub_queries: list[str], k_per_query: int) -> list[ChunkRecord]:
 
         results = self.collection.query(
