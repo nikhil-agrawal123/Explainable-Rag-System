@@ -1,6 +1,3 @@
-# FastAPI entry point
-# Initialize App
-# Include API routers
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,7 +5,6 @@ from app.core.config import settings
 from app.api.endpoints import router as api_router
 from app.db.chroma_client import ChromaClient
 import sys
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,10 +29,10 @@ app = FastAPI(
 
 app.include_router(api_router, prefix="/api/v3")
 
-
 @app.get("/")
 def root():
     return {"message": "DataForge Server is Running. Go to /docs for the UI."}
+
 
 if __name__ == "__main__":
     if hasattr(sys.stdout, "reconfigure"):

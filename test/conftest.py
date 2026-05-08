@@ -78,7 +78,6 @@ class FakeLLM:
     the prompt content. This allows real parsing logic to be tested.
     """
     def invoke(self, messages, **kwargs):
-        # Inspect the prompt to determine what kind of call this is
         prompt_text = ""
         for m in messages:
             if hasattr(m, "content"):
@@ -88,7 +87,6 @@ class FakeLLM:
 
         prompt_lower = prompt_text.lower()
 
-        # Query decomposition
         if "decomposition" in prompt_lower or "sub-quer" in prompt_lower:
             return FakeAIMessage(
                 "1. What are the fundamental concepts?\n"
@@ -96,29 +94,24 @@ class FakeLLM:
                 "3. What are the practical applications?"
             )
 
-        # Domain classification
         if "domain classification" in prompt_lower:
             return FakeAIMessage("Computer Science")
 
-        # Entity extraction
         if "extract entities" in prompt_lower or "entity extraction" in prompt_lower:
             return FakeAIMessage('[\"Entity_A\", \"Entity_B\", \"Entity_C\"]')
 
-        # Relation extraction
         if "extract relations" in prompt_lower or "relation extraction" in prompt_lower or "knowledge extraction" in prompt_lower:
             return FakeAIMessage(
                 '[[\"Entity_A\", \"relates_to\", \"Entity_B\"], '
                 '[\"Entity_B\", \"is_part_of\", \"Entity_C\"]]'
             )
 
-        # Generation (answer)
         if "dataforge" in prompt_lower and "evidence-based" in prompt_lower:
             return FakeAIMessage(
                 "Based on the evidence, the answer involves key concepts "
                 "[TestDoc_CH0] and supported relationships [TestDoc_CH1]."
             )
 
-        # Default
         return FakeAIMessage("Default LLM response.")
 
 
@@ -161,19 +154,15 @@ def test_client():
       - All FastAPI routing and validation
     """
     with (
-        # External boundary: ChromaDB
         patch("app.db.chroma_client.ChromaClient", FakeChromaClient),
         patch("app.db.chroma_client.embedding_function", MagicMock()),
         patch("app.db.chroma_client.ollama", MagicMock()),
-        # External boundary: Ollama LLM — use FakeLLM via get_llm()
         patch("app.utils.llm.get_llm", _get_fake_llm),
         patch("app.utils.llm._llm", _fake_llm_instance),
-        # External boundary: Whisper audio model
         patch(
             "app.pipeline.stage_1_ingestion.IngestionPipeline.transcribe_audio",
             _fake_transcribe,
         ),
-        # Patch ChromaClient in modules that import it directly
         patch("app.pipeline.stage_1_ingestion.ChromaClient", FakeChromaClient),
         patch("app.pipeline.stage_3_retrieval.ChromaClient", FakeChromaClient),
     ):
@@ -209,7 +198,6 @@ def is_llm_online():
 @pytest.fixture()
 def sample_pdf(tmp_path):
     """Create a valid PDF with actual text content for ingestion tests."""
-    # Create a PDF with text content that can be extracted and chunked
     pdf_bytes = (
         b"%PDF-1.4\n"
         b"1 0 obj\n"

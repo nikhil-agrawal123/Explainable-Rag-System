@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: Optional[str] = Field(default=None)
     QDRANT_CLUSTER_ENDPOINT: Optional[str] = Field(default=None)
 
+    # App Authentication
+    AUTH_EMAIL: Optional[str] = Field(default=os.getenv("AUTH_EMAIL"))
+    AUTH_PASSWORD: Optional[str] = Field(default=os.getenv("AUTH_PASSWORD"))
+
     # Persistence Paths
     CHROMA_PERSIST_DIR: str = Field(default="./data/chroma_storage")
     UPLOAD_DIR: str = Field(default="./data/uploads")
