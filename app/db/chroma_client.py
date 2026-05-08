@@ -29,6 +29,10 @@ class OllamaEmbeddingFunction(EmbeddingFunction):
         
         return all_embeddings
 
+    def name(self) -> str:
+        """Return a unique name for this embedding function."""
+        return f"ollama_{self.model_name.replace(':', '_')}"
+
 # Create a singleton instance
 embedding_function = OllamaEmbeddingFunction()
 

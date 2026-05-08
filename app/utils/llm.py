@@ -65,6 +65,9 @@ def domain_classification(text: str = None) -> List[str]:
 
         If uncertain, return: General Knowledge
         """
+    
+    if not text:
+        return []
 
     try:
         messages = [
@@ -94,6 +97,9 @@ def extract_entities(text: str):
 
         If no entities exist, return: []
         """
+    
+    if not text:
+        return []
 
     try:
         messages = [
@@ -240,6 +246,9 @@ def extract_relations(text: str) -> List[List[str]]:
         - Ensure subjects and objects are identifiable entities
 
         """
+    
+    if not text: 
+        return []
 
     try:
         messages = [

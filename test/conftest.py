@@ -8,6 +8,9 @@ application logic while remaining fast and offline.
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
+import socket
+from urllib.parse import urlparse
+import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -180,24 +183,78 @@ def test_client():
         yield client
 
 
+@pytest.fixture(scope="session")
+def is_llm_online():
+    """Return True if the configured OLLAMA_HOST is reachable via TCP."""
+    from app.core.config import settings
+
+    host = settings.OLLAMA_HOST
+    if not host:
+        return False
+
+    try:
+        parsed = urlparse(host)
+        hostname = parsed.hostname or parsed.path
+        port = parsed.port or 11434
+        with socket.create_connection((hostname, port), timeout=2):
+            return True
+    except Exception:
+        return False
+
+
 # ---------------------------------------------------------------------------
 # File-creation fixtures for upload tests
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
 def sample_pdf(tmp_path):
-    """Create a minimal valid PDF for upload tests."""
+    """Create a valid PDF with actual text content for ingestion tests."""
+    # Create a PDF with text content that can be extracted and chunked
     pdf_bytes = (
-        b"%PDF-1.0\n"
-        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
-        b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
-        b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\n"
-        b"xref\n0 4\n"
-        b"0000000000 65535 f \n"
-        b"0000000009 00000 n \n"
-        b"0000000058 00000 n \n"
-        b"0000000115 00000 n \n"
-        b"trailer<</Size 4/Root 1 0 R>>\nstartxref\n210\n%%EOF"
+        b"%PDF-1.4\n"
+        b"1 0 obj\n"
+        b"<< /Type /Catalog /Pages 2 0 R >>\n"
+        b"endobj\n"
+        b"2 0 obj\n"
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+        b"endobj\n"
+        b"3 0 obj\n"
+        b"<< /Type /Page /Parent 2 0 R /Resources 4 0 R /MediaBox [0 0 612 792] /Contents 5 0 R >>\n"
+        b"endobj\n"
+        b"4 0 obj\n"
+        b"<< /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >>\n"
+        b"endobj\n"
+        b"5 0 obj\n"
+        b"<< /Length 248 >>\n"
+        b"stream\n"
+        b"BT\n"
+        b"/F1 12 Tf\n"
+        b"50 750 Td\n"
+        b"(Test Document for PDF Ingestion) Tj\n"
+        b"0 -20 Td\n"
+        b"(This is a sample PDF document with actual text content.) Tj\n"
+        b"0 -20 Td\n"
+        b"(It contains multiple lines of text that can be extracted and processed.) Tj\n"
+        b"0 -20 Td\n"
+        b"(The ingestion pipeline will chunk this content for storage.) Tj\n"
+        b"0 -20 Td\n"
+        b"(Entity extraction and relation detection can work on this text.) Tj\n"
+        b"ET\n"
+        b"endstream\n"
+        b"endobj\n"
+        b"xref\n"
+        b"0 6\n"
+        b"0000000000 65535 f\n"
+        b"0000000009 00000 n\n"
+        b"0000000062 00000 n\n"
+        b"0000000123 00000 n\n"
+        b"0000000244 00000 n\n"
+        b"0000000346 00000 n\n"
+        b"trailer\n"
+        b"<< /Size 6 /Root 1 0 R >>\n"
+        b"startxref\n"
+        b"647\n"
+        b"%%EOF\n"
     )
     path = tmp_path / "test_upload.pdf"
     path.write_bytes(pdf_bytes)
