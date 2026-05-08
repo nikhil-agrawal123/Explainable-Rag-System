@@ -1,9 +1,7 @@
 from app.models.schemas import Relation, ExtractedMetadata
 from langsmith import traceable
 from app.utils.llm import domain_classification, extract_relations, extract_entities
-from dotenv import load_dotenv
 
-load_dotenv(override=False)
 
 class MetadataExtractor:
     def __init__(self):

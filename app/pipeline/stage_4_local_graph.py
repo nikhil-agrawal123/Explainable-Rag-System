@@ -6,9 +6,7 @@ import networkx as nx
 from typing import List, Dict, Any
 from app.models.schemas import ChunkRecord
 from langsmith import traceable
-from dotenv import load_dotenv
 
-load_dotenv(override=False)
 
 class KnowledgeGraphBuilder:
     def __init__(self):

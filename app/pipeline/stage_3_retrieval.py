@@ -9,10 +9,8 @@ from app.db.chroma_client import ChromaClient
 from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
 from app.pipeline.metadata import MetadataExtractor
 from langsmith import traceable
-from dotenv import load_dotenv
 from app.models.schemas import ChunkRecord
 
-load_dotenv(override=False)
 
 class MultiQueryRetrievalPipeline:
     def __init__(self):

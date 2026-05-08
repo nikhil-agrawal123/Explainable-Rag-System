@@ -6,9 +6,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langsmith import traceable
 from typing import List
-from dotenv import load_dotenv
 
-load_dotenv(override=False)
 
 class Chuncking():
     @traceable(name="Chuncking Init", run_type="tool")

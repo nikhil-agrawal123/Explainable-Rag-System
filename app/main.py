@@ -4,7 +4,6 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
 from app.core.config import settings
 from app.api.endpoints import router as api_router
 from app.db.chroma_client import ChromaClient

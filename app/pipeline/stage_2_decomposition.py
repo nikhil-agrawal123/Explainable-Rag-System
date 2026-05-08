@@ -4,10 +4,8 @@
 
 from langchain.messages import HumanMessage
 from langsmith import traceable
-from dotenv import load_dotenv
 from app.utils.llm import get_llm
 
-load_dotenv(override=False)
 
 
 # Query Decomposition Pipeline

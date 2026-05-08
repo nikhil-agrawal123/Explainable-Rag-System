@@ -2,9 +2,7 @@ import networkx as nx
 from pyvis.network import Network
 import plotly.graph_objects as go
 from langsmith import traceable
-from dotenv import load_dotenv
 
-load_dotenv(override=False) 
 
 class GraphVisualizer:
     def __init__(self, graph: nx.MultiDiGraph):
