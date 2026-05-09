@@ -29,11 +29,6 @@ app = FastAPI(
 
 app.include_router(api_router, prefix="/api/v3")
 
-@app.get("/")
-def root():
-    return {"message": "DataForge Server is Running. Go to /docs for the UI."}
-
-
 if __name__ == "__main__":
     if hasattr(sys.stdout, "reconfigure"):
         try:

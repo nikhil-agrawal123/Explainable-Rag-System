@@ -1,9 +1,7 @@
-from fastapi import APIRouter, Depends, Form, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from app.api.auth import authenticate, logout, get_current_user
 from supabase import Client, create_client
 from dotenv import load_dotenv
-from pydantic import SecretStr
-from bcrypt import hashpw, gensalt
 import os
 
 load_dotenv()
@@ -73,14 +71,21 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed: {e}",
         )
-    token = authenticate(email, password)
+    token = authenticate(email=email)
     return {"status": "success", "access_token": token, "token_type": "bearer"}
 
 
 @router.post("/logout/", summary="Log out and revoke the access token")
 def logout_endpoint(authorization: str = Header(default="")):
-    if authorization.startswith("Bearer "):
-        logout(authorization.removeprefix("Bearer ").strip())
+    try:
+        if authorization.startswith("Bearer "):
+            logout(authorization.removeprefix("Bearer ").strip())
+            supabase.auth.sign_out()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Logout failed: {e}",
+        )
     return {"status": "success"}
 
 

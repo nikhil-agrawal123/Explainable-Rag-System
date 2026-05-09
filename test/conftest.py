@@ -123,14 +123,6 @@ def _get_fake_llm():
 
 
 # ---------------------------------------------------------------------------
-# Fake transcription for audio tests
-# ---------------------------------------------------------------------------
-
-def _fake_transcribe(self, file_path):
-    return {"status": "success", "doc_id": "audio_sample", "chunks": 2}
-
-
-# ---------------------------------------------------------------------------
 # Session-scoped TestClient — built once for the entire test run
 # ---------------------------------------------------------------------------
 
@@ -159,10 +151,6 @@ def test_client():
         patch("app.db.chroma_client.ollama", MagicMock()),
         patch("app.utils.llm.get_llm", _get_fake_llm),
         patch("app.utils.llm._llm", _fake_llm_instance),
-        patch(
-            "app.pipeline.stage_1_ingestion.IngestionPipeline.transcribe_audio",
-            _fake_transcribe,
-        ),
         patch("app.pipeline.stage_1_ingestion.ChromaClient", FakeChromaClient),
         patch("app.pipeline.stage_3_retrieval.ChromaClient", FakeChromaClient),
     ):

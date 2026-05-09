@@ -1,11 +1,10 @@
 import secrets
 from dataclasses import dataclass
 from threading import Lock
-from typing import Dict, Optional
+from typing import Dict
 
 from fastapi import Header, HTTPException, status
 
-from app.core.config import settings
 
 
 @dataclass(frozen=True)
@@ -17,25 +16,8 @@ _active_tokens: Dict[str, AuthenticatedUser] = {}
 _token_lock = Lock()
 
 
-def _expected_credentials() -> tuple[Optional[str], Optional[str]]:
-    return settings.AUTH_EMAIL, settings.AUTH_PASSWORD
-
-
-def authenticate(email: str, password: str) -> str:
-    expected_email, expected_password = _expected_credentials()
-
-    if not expected_email or not expected_password:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication is not configured.",
-        )
-
-    if email != expected_email or password != expected_password:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials.",
-        )
-
+def authenticate(email: str) -> str:
+    
     token = secrets.token_urlsafe(32)
     with _token_lock:
         _active_tokens[token] = AuthenticatedUser(email=email)
