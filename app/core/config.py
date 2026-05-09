@@ -30,10 +30,10 @@ class Settings(BaseSettings):
     LANGSMITH_TRACING: bool = Field(default=True)
     LANGSMITH_ENDPOINT: Optional[str] = Field(default=None)
     LANGSMITH_API_KEY: Optional[str] = Field(default=os.getenv("LANGSMITH_API_KEY"))
-    LANGSMITH_PROJECT: str = Field(default=os.getenv("LANGSMITH_PROJECT"))
+    LANGSMITH_PROJECT: Optional[str] = Field(default=os.getenv("LANGSMITH_PROJECT"))
 
     # Ollama (Local LLM)
-    OLLAMA_HOST: str = Field(default=os.getenv("OLLAMA_HOST"))
+    OLLAMA_HOST: Optional[str] = Field(default=os.getenv("OLLAMA_HOST"))
     OLLAMA_DOMAIN_MODEL: str = Field(default="qwen3.5:4b")
     OLLAMA_DOMAIN_MODEL_SMALL: str = Field(default="qwen3.5:0.8b")
     OLLAMA_EMBEDDING_MODEL: str = Field(default="qwen3-embedding:8b")
