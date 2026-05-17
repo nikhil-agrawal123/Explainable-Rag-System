@@ -1,6 +1,10 @@
 import logging
 import sys
 from contextlib import asynccontextmanager
+import os
+from fastapi.responses import JSONResponse
+import socket
+from urllib.parse import urlparse
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,10 +42,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/health", summary="Health check endpoint")
+@app.get("/health", summary="Health check endpoint")
 def health_check():
     """Simple endpoint to check if the server is running."""
     return {"status": "ok", "message": "DataForge Server is healthy."}
+
+@app.get("/health/ready")
+def health_ready():
+    statuses = {}
+    healthy = True
+    # 1. ChromaDB
+    try:
+        ChromaClient.get_instance()
+        statuses["chromadb"] = "ok"
+    except Exception as e:
+        statuses["chromadb"] = str(e)
+        healthy = False
+    # 2. Ollama host reachable
+    try:
+        host = settings.OLLAMA_HOST
+        parsed = urlparse(host)
+        with socket.create_connection((parsed.hostname, parsed.port or 11434), timeout=3):
+            statuses["ollama"] = "ok"
+    except Exception as e:
+        statuses["ollama"] = str(e)
+        healthy = False
+    # 3. Data directories writable
+    for name, path in [("uploads", settings.UPLOAD_DIR), ("viz", settings.VIZ_DIR)]:
+        try:
+            os.makedirs(path, exist_ok=True)
+            statuses[f"dir_{name}"] = "ok"
+        except Exception as e:
+            statuses[f"dir_{name}"] = str(e)
+            healthy = False
+    status_code = 200 if healthy else 503
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": "ready" if healthy else "unhealthy", "checks": statuses},
+    )
 
 app.include_router(api_router, prefix="/api/v3")
 

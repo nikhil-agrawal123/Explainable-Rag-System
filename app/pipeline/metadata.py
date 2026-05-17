@@ -15,7 +15,6 @@ class MetadataExtractor:
         #Local LLM call for domain classification
         domain_guess = domain_classification(chunck) 
 
-        # Use LLM for relation extraction instead of SpaCy dependency parsing
         raw_relations = extract_relations(chunck)
         relations = [
             Relation(subject=rel[0], predicate=rel[1], object=rel[2])
