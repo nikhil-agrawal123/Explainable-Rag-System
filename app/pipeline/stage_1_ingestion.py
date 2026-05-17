@@ -38,16 +38,16 @@ class IngestionPipeline:
             return []
 
     @traceable(name="Ingest Document", run_type="tool")
-    async def process_document(self, file_path: str):
+    async def process_document(self, file_path: str, user_id: str = ""):
         filename = os.path.basename(file_path)
         doc_id = self._safe_doc_id(filename)
 
-        print(f"Starting ingestion for: {filename}")
+        print(f"Starting ingestion for: {filename} (user={user_id})")
 
-        # Check for duplicate
-        existing = self.db_collection.get(where={"document_id": doc_id}, limit=1)
+        # Check for duplicate per-user
+        existing = self.db_collection.get(where={"$and": [{"document_id": doc_id}, {"user_id": user_id}]}, limit=1)
         if existing["ids"]:
-            print(f"Document {doc_id} already exists, skipping.")
+            print(f"Document {doc_id} already exists for user {user_id}, skipping.")
             return {"status": "skipped", "doc_id": doc_id, "reason": "Already ingested"}
 
         # Load PDF in thread pool (blocking I/O)
@@ -75,6 +75,7 @@ class IngestionPipeline:
                 document_id=doc_id,
                 text=chunk_text,
                 source=filename,
+                user_id=user_id,
                 start_time=None,
                 end_time=None,
                 page_number=chunk.metadata.get("page", 0),
@@ -100,7 +101,7 @@ class IngestionPipeline:
         return {"status": "success", "doc_id": doc_id, "chunks": len(ids_to_save)}
 
     @traceable(name="Process Audio file", run_type="tool")
-    def transcribe_audio(self, file_path: str) -> dict:
+    def transcribe_audio(self, file_path: str, user_id: str = "") -> dict:
         model = self._get_audio_model()
         results = model.transcribe(file_path)
         file_name = os.path.basename(file_path)
@@ -120,6 +121,7 @@ class IngestionPipeline:
                 document_id=doc_id,
                 text=text,
                 source=file_name,
+                user_id=user_id,
                 page_number=0,
                 start_time=float(seg["start"]),
                 end_time=float(seg["end"])

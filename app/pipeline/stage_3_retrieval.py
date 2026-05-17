@@ -19,11 +19,13 @@ class MultiQueryRetrievalPipeline:
         self.metadata_extractor = MetadataExtractor()
 
     @traceable(name="Multi-Query Retrieval", run_type="tool")
-    def retrieve_documents(self, sub_queries: list[str], k_per_query: int) -> list[ChunkRecord]:
+    def retrieve_documents(self, sub_queries: list[str], k_per_query: int, user_id: str = "") -> list[ChunkRecord]:
+        where_filter = {"user_id": user_id} if user_id else None
 
         results = self.collection.query(
             query_texts=sub_queries,
             n_results=k_per_query,
+            where=where_filter,
             include=["metadatas", "documents", "distances"]
         )
 

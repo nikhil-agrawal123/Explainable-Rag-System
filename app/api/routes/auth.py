@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from app.api.auth import authenticate, logout, get_current_user
+from app.api.auth import create_access_token, get_current_user
 from supabase import Client, create_client
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
-router = APIRouter()
+router = APIRouter(tags=["Auth"])
 
 supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
@@ -60,8 +60,8 @@ def login(
         )
         
     try:
-        respoonse = supabase.auth.sign_in_with_password({"email": email, "password": password})
-        if getattr(respoonse, "user", None) is None:
+        response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        if getattr(response, "user", None) is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials.",
@@ -71,22 +71,22 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed: {e}",
         )
-    token = authenticate(email=email)
+    user_id = response.user.id if getattr(response, "user", None) else ""
+    token = create_access_token(email=email, user_id=user_id)
     return {"status": "success", "access_token": token, "token_type": "bearer"}
 
 
-@router.post("/logout/", summary="Log out and revoke the access token")
+@router.post("/logout/", summary="Log out (client-side token discard)")
 def logout_endpoint(authorization: str = Header(default="")):
     try:
         if authorization.startswith("Bearer "):
-            logout(authorization.removeprefix("Bearer ").strip())
             supabase.auth.sign_out()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Logout failed: {e}",
         )
-    return {"status": "success"}
+    return {"status": "success", "message": "Token discarded. Remove it from client storage."}
 
 
 @router.get("/me/", summary="Return the authenticated user")

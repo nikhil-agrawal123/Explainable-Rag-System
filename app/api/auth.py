@@ -1,32 +1,27 @@
-import secrets
 from dataclasses import dataclass
-from threading import Lock
-from typing import Dict
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Header, HTTPException, status
+from jose import JWTError, jwt
 
+from app.core.config import settings
 
 
 @dataclass(frozen=True)
 class AuthenticatedUser:
     email: str
+    user_id: str = ""
 
 
-_active_tokens: Dict[str, AuthenticatedUser] = {}
-_token_lock = Lock()
-
-
-def authenticate(email: str) -> str:
-    
-    token = secrets.token_urlsafe(32)
-    with _token_lock:
-        _active_tokens[token] = AuthenticatedUser(email=email)
-    return token
-
-
-def logout(token: str) -> None:
-    with _token_lock:
-        _active_tokens.pop(token, None)
+def create_access_token(email: str, user_id: str = "") -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRY_MINUTES)
+    payload = {
+        "sub": email,
+        "user_id": user_id,
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
 def get_current_user(authorization: str = Header(default="")) -> AuthenticatedUser:
@@ -34,6 +29,7 @@ def get_current_user(authorization: str = Header(default="")) -> AuthenticatedUs
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid authorization token.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     token = authorization.removeprefix("Bearer ").strip()
@@ -41,15 +37,21 @@ def get_current_user(authorization: str = Header(default="")) -> AuthenticatedUs
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid authorization token.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    with _token_lock:
-        user = _active_tokens.get(token)
-
-    if user is None:
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload.",
+            )
+        return AuthenticatedUser(email=email, user_id=payload.get("user_id", ""))
+    except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You must be logged in to access this endpoint.",
+            detail="Invalid or expired token.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    return user

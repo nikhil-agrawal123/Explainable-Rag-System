@@ -48,13 +48,15 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: Optional[str] = Field(default=None)
     QDRANT_CLUSTER_ENDPOINT: Optional[str] = Field(default=None)
 
-    # App Authentication
-    AUTH_EMAIL: Optional[str] = Field(default=os.getenv("AUTH_EMAIL"))
-    AUTH_PASSWORD: Optional[str] = Field(default=os.getenv("AUTH_PASSWORD"))
+    # JWT
+    JWT_SECRET: str = Field(default=os.getenv("JWT_SECRET", "change-me-in-production-use-a-long-random-string"))
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRY_MINUTES: int = Field(default=int(os.getenv("JWT_EXPIRY_MINUTES", "60")))
 
     # Persistence Paths
     CHROMA_PERSIST_DIR: str = Field(default="./data/chroma_storage")
     UPLOAD_DIR: str = Field(default="./data/uploads")
+    VIZ_DIR: str = Field(default="./data/viz")
     COLLECTION_NAME: str = Field(default="dataforge_knowledge")
 
 
@@ -63,3 +65,4 @@ settings = Settings()
 # Ensure directories exist immediately upon import
 os.makedirs(settings.CHROMA_PERSIST_DIR, exist_ok=True)
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+os.makedirs(settings.VIZ_DIR, exist_ok=True)

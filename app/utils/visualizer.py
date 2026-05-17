@@ -1,3 +1,4 @@
+import os
 import networkx as nx
 from pyvis.network import Network
 import plotly.graph_objects as go
@@ -14,6 +15,7 @@ class GraphVisualizer:
         Creates an interactive 2D physics graph using PyVis.
         Best for reading entities and relations.
         """
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         print(f"Generating 2D Graph: {output_path}")
         
         # 1. Convert to PyVis (needs a specific format)

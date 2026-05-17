@@ -27,6 +27,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.post("/health", summary="Health check endpoint")
+def health_check():
+    """Simple endpoint to check if the server is running."""
+    return {"status": "ok", "message": "DataForge Server is healthy."}
+
 app.include_router(api_router, prefix="/api/v3")
 
 if __name__ == "__main__":
