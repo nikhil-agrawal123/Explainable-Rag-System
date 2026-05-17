@@ -2,9 +2,13 @@
 # - Break complex query into sub-queries
 # - Domain mapping
 
+import logging
+
 from langchain.messages import HumanMessage
 from langsmith import traceable
 from app.utils.llm import get_llm
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -61,5 +65,5 @@ class QueryDecompositionPipeline:
 
             return sub_queries
         except Exception as e:
-            print(f"Error during query decomposition: {e}")
+            logger.error("Error during query decomposition: %s", e)
             return []

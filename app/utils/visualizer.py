@@ -1,8 +1,12 @@
+import logging
 import os
+
 import networkx as nx
 from pyvis.network import Network
 import plotly.graph_objects as go
 from langsmith import traceable
+
+logger = logging.getLogger(__name__)
 
 
 class GraphVisualizer:
@@ -16,7 +20,7 @@ class GraphVisualizer:
         Best for reading entities and relations.
         """
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-        print(f"Generating 2D Graph: {output_path}")
+        logger.info("Generating 2D Graph: %s", output_path)
         
         # 1. Convert to PyVis (needs a specific format)
         net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", directed=True)
@@ -49,7 +53,7 @@ class GraphVisualizer:
         Creates a 3D Scatter plot using Plotly.
         Good for 'Wow Factor' but harder to read.
         """
-        print(f"Generating 3D Graph: {output_path}")
+        logger.info("Generating 3D Graph: %s", output_path)
         
         # 1. Calculate 3D Layout (Positions x, y, z)
         pos = nx.spring_layout(self.graph, dim=3, seed=42)

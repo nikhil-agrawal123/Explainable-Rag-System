@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 from typing import List
@@ -7,6 +8,8 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from app.api.auth import AuthenticatedUser, get_current_user
 from app.core.config import settings
 from app.pipeline.stage_1_ingestion import IngestionPipeline
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Ingestion"])
 
@@ -22,7 +25,7 @@ async def ingest_documents(
     user_upload_dir = os.path.join(settings.UPLOAD_DIR, user_id)
     os.makedirs(user_upload_dir, exist_ok=True)
 
-    print(f"Received {len(files)} files for ingestion (user={user_id}).")
+    logger.info("Received %d files for ingestion (user=%s).", len(files), user_id)
 
     for file in files:
         if not file.filename.endswith(".pdf"):
@@ -43,7 +46,7 @@ async def ingest_documents(
             })
 
         except Exception as e:
-            print(f"Error processing {file.filename}: {e}")
+            logger.error("Error processing %s: %s", file.filename, e)
             results.append({
                 "file": file.filename,
                 "status": "failed",

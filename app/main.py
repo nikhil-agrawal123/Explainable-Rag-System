@@ -1,10 +1,14 @@
+import logging
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.endpoints import router as api_router
 from app.db.chroma_client import ChromaClient
-import sys
+
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,10 +16,10 @@ async def lifespan(app: FastAPI):
     # ── Startup ──
     try:
         ChromaClient.get_instance()
-        print(f"DataForge Server Online")
-        print(f"   Storage: {settings.CHROMA_PERSIST_DIR}")
+        logger.info("DataForge Server Online")
+        logger.info("   Storage: %s", settings.CHROMA_PERSIST_DIR)
     except Exception as e:
-        print(f"Critical Error: Database not accessible. {e}")
+        logger.critical("Database not accessible. %s", e)
     yield
     # ── Shutdown (add cleanup here if needed) ──
 
@@ -25,6 +29,13 @@ app = FastAPI(
     version="3.0",
     description="DataForge RAG: Multi-File Ingestion Engine",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8000", "http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.post("/health", summary="Health check endpoint")

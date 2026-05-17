@@ -5,11 +5,15 @@
 
 #TODO implement hybrid search 
 
+import logging
+
 from app.db.chroma_client import ChromaClient   
 from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
 from app.pipeline.metadata import MetadataExtractor
 from langsmith import traceable
 from app.models.schemas import ChunkRecord
+
+logger = logging.getLogger(__name__)
 
 
 class MultiQueryRetrievalPipeline:
@@ -56,6 +60,6 @@ class MultiQueryRetrievalPipeline:
                 unique_chunks[chunk_id] = record
 
         unique_list = list(unique_chunks.values())
-        print(f"Retrieved {len(unique_list)} unique chunks from {len(sub_queries)} queries.")
+        logger.info("Retrieved %d unique chunks from %d queries.", len(unique_list), len(sub_queries))
         return unique_list
 

@@ -1,6 +1,8 @@
 # Stage 5: Answer generation and validation
 # - LLM Generation (constrained by Evidence Graph)
 # - Claim validation against evidence
+import logging
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langsmith import traceable
@@ -8,9 +10,11 @@ from typing import List
 from app.models.schemas import ChunkRecord
 from app.utils.llm import get_llm
 
+logger = logging.getLogger(__name__)
+
 class GenerationEngine:
     def __init__(self, model_name: str = None):
-        print(f"Loading Generator...")
+        logger.info("Loading Generator...")
         self.llm = get_llm()
         
         # --- THE EVIDENCE PROMPT ---
@@ -44,7 +48,7 @@ class GenerationEngine:
 
     @traceable(name="Stage5_Generation", run_type="chain")
     def generate_answer(self, query: str, chunks: List[ChunkRecord], graph_summary: str) -> str:
-        print(f"Generating answer for: '{query}'")
+        logger.info("Generating answer for: '%s'", query)
         
         # 1. Format the Text Context
         text_context = "\n\n".join(

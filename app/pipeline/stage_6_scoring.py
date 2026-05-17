@@ -1,11 +1,14 @@
 # Stage 6: Document Scoring and Transparency
 # - Calculate contribution % per document
 # - Identify unused documents
+import logging
 import re
 from typing import List, Dict
 from collections import defaultdict
 from app.models.schemas import ChunkRecord
 from langsmith import traceable
+
+logger = logging.getLogger(__name__)
 
 class TrustScorer:
     def __init__(self):
@@ -17,7 +20,7 @@ class TrustScorer:
         """
         Analyzes the answer to quantify trust and document contribution.
         """
-        print("[Scoring] Calculating trust scores...")
+        logger.info("Calculating trust scores...")
 
         # 1. Identify Valid IDs
         valid_chunk_map = {c.chunk_id: c.document_id for c in retrieved_chunks}

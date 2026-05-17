@@ -1,5 +1,6 @@
 # Configuration settings
 # Environment variables (OPENAI_KEY, CHROMA_PATH, etc.)
+import logging
 import os
 from typing import Optional
 
@@ -8,6 +9,13 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv(override=False)
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
