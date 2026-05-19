@@ -19,6 +19,7 @@ services:
       - OLLAMA_HOST=http://ollama:11434
       - LOG_LEVEL=INFO
     volumes:
+      - pip_cache:/root/.cache/pip
       - dataforge_data:/app/data
     entrypoint: /app/entrypoint.sh
     depends_on:
@@ -28,3 +29,4 @@ services:
 volumes:
   ollama_data:
   dataforge_data:
+  pip_cache:

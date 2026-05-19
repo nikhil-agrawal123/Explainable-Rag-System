@@ -1,10 +1,14 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Header, HTTPException, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from app.core.config import settings
+
+
+security_scheme = HTTPBearer(auto_error=False)
 
 
 @dataclass(frozen=True)
@@ -24,22 +28,17 @@ def create_access_token(email: str, user_id: str = "") -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
-def get_current_user(authorization: str = Header(default="")) -> AuthenticatedUser:
-    if not authorization.startswith("Bearer "):
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+) -> AuthenticatedUser:
+    if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid authorization token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = authorization.removeprefix("Bearer ").strip()
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization token.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         email: str = payload.get("sub")
