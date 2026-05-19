@@ -1,12 +1,16 @@
 # ChromaDB Persistent Client setup
 # - Initialize PersistentClient
 # - Collection management
+import logging
+
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
 from app.core.config import settings
 import ollama
 from langsmith import traceable
+
+logger = logging.getLogger(__name__)
 
 OLLAMA_MODEL = settings.OLLAMA_EMBEDDING_MODEL
 BATCH_SIZE = 16  # Adjust based on your GPU memory
@@ -43,7 +47,7 @@ class ChromaClient:
     @traceable(name="Get_ChromaDB_Instance", run_type="tool")
     def get_instance(cls):
         if cls._instance is None:
-            print(f"[Orchestrator] Mounting ChromaDB at: {settings.CHROMA_PERSIST_DIR}")
+            logger.info("Mounting ChromaDB at: %s", settings.CHROMA_PERSIST_DIR)
             cls._instance = chromadb.PersistentClient(
                 path=settings.CHROMA_PERSIST_DIR,
                 settings=ChromaSettings(allow_reset=True)

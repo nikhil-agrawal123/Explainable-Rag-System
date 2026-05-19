@@ -2,10 +2,14 @@
 # - Entity extraction from retrieved chunks
 # - Relation extraction (Triples)
 # - Construct local evidence graph
+import logging
+
 import networkx as nx
 from typing import List, Dict, Any
 from app.models.schemas import ChunkRecord
 from langsmith import traceable
+
+logger = logging.getLogger(__name__)
 
 
 class KnowledgeGraphBuilder:
@@ -17,7 +21,7 @@ class KnowledgeGraphBuilder:
         """
         Turns flat chunks into a rich network of entities and relations.
         """
-        print(f" Building Graph from {len(chunks)} chunks...")
+        logger.info("Building Graph from %d chunks...", len(chunks))
         
         # Clear previous state if reusing the object
         self.graph.clear()
@@ -40,7 +44,7 @@ class KnowledgeGraphBuilder:
                     source=chunk.source
                 )
 
-        print(f" Graph Built: {self.graph.number_of_nodes()} Nodes, {self.graph.number_of_edges()} Edges")
+        logger.info("Graph Built: %d Nodes, %d Edges", self.graph.number_of_nodes(), self.graph.number_of_edges())
         return self.graph
 
     def get_relational_context(self) -> str:

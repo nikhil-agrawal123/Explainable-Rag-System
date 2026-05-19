@@ -1,0 +1,15 @@
+.venv/
+.venv
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+data/
+.vscode/
+.claude/
+graphify-out/
+*.md
+LICENSE
+.pytest_cache/
+test/

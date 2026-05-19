@@ -1,10 +1,14 @@
+import json
+import logging
 from typing import Any, List
+
 from langsmith import traceable
 from langchain_ollama import ChatOllama
 from langchain.messages import HumanMessage
 from langchain_core.messages import ChatMessage
 from app.core.config import settings
-import json
+
+logger = logging.getLogger(__name__)
 
 
 # Lazy LLM singleton — created on first use, not at import time,
@@ -76,10 +80,10 @@ def domain_classification(text: str = None) -> List[str]:
         ]
 
         ai_msg = get_llm().invoke(messages)
-        print(ai_msg.content)
+        logger.debug("LLM domain response: %s", ai_msg.content)
         return ai_msg.content.split(",") if ai_msg.content else []
     except Exception as e:
-        print(f"Error during LLM invocation: {e}")
+        logger.error("Error during LLM invocation: %s", e)
         return []
 
 @traceable(name="Entity Extraction", run_type="llm")
@@ -122,7 +126,7 @@ def extract_entities(text: str):
         
         return valid_entities
     except Exception as e:
-        print(f"Error during entity extraction: {e}")
+        logger.error("Error during entity extraction: %s", e)
         return []
 
 @traceable(name="Relation Extraction", run_type="llm")
@@ -257,7 +261,7 @@ def extract_relations(text: str) -> List[List[str]]:
         ]
 
         ai_msg = get_llm().invoke(messages)
-        print(ai_msg.content)
+        logger.debug("LLM relation response: %s", ai_msg.content)
         response = _extract_json_payload(getattr(ai_msg, "content", ""))
         if not response:
             return []
@@ -272,5 +276,5 @@ def extract_relations(text: str) -> List[List[str]]:
         
         return valid_relations
     except Exception as e:
-        print(f"Error during relation extraction: {e}")
+        logger.error("Error during relation extraction: %s", e)
         return []

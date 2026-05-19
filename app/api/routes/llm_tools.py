@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
 from app.utils.llm import extract_entities, extract_relations
 
-router = APIRouter()
+router = APIRouter(tags=["LLM Tools"])
 
 
 @router.post("/extract_entities/", summary="Extract Entities from Text Snippet")

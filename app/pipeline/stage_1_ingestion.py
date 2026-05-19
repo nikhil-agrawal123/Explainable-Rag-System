@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from langsmith import traceable
@@ -5,6 +6,8 @@ from langchain_community.document_loaders import PyPDFLoader
 import whisper
 import asyncio
 from functools import partial
+
+logger = logging.getLogger(__name__)
 
 from app.models.schemas import ChunkRecord
 from app.pipeline.chuncking import Chuncking
@@ -34,20 +37,20 @@ class IngestionPipeline:
             loader = PyPDFLoader(file_path)
             return loader.load()
         except Exception as e:
-            print(f"Error loading PDF {file_path}: {e}")
+            logger.error("Error loading PDF %s: %s", file_path, e)
             return []
 
     @traceable(name="Ingest Document", run_type="tool")
-    async def process_document(self, file_path: str):
+    async def process_document(self, file_path: str, user_id: str = ""):
         filename = os.path.basename(file_path)
         doc_id = self._safe_doc_id(filename)
 
-        print(f"Starting ingestion for: {filename}")
+        logger.info("Starting ingestion for: %s (user=%s)", filename, user_id)
 
-        # Check for duplicate
-        existing = self.db_collection.get(where={"document_id": doc_id}, limit=1)
+        # Check for duplicate per-user
+        existing = self.db_collection.get(where={"$and": [{"document_id": doc_id}, {"user_id": user_id}]}, limit=1)
         if existing["ids"]:
-            print(f"Document {doc_id} already exists, skipping.")
+            logger.warning("Document %s already exists for user %s, skipping.", doc_id, user_id)
             return {"status": "skipped", "doc_id": doc_id, "reason": "Already ingested"}
 
         # Load PDF in thread pool (blocking I/O)
@@ -75,6 +78,7 @@ class IngestionPipeline:
                 document_id=doc_id,
                 text=chunk_text,
                 source=filename,
+                user_id=user_id,
                 start_time=None,
                 end_time=None,
                 page_number=chunk.metadata.get("page", 0),
@@ -96,11 +100,11 @@ class IngestionPipeline:
                     metadatas=metas_to_save)
         )
 
-        print(f"Saved {len(ids_to_save)} chunks for {doc_id}.")
+        logger.info("Saved %d chunks for %s.", len(ids_to_save), doc_id)
         return {"status": "success", "doc_id": doc_id, "chunks": len(ids_to_save)}
 
     @traceable(name="Process Audio file", run_type="tool")
-    def transcribe_audio(self, file_path: str) -> dict:
+    def transcribe_audio(self, file_path: str, user_id: str = "") -> dict:
         model = self._get_audio_model()
         results = model.transcribe(file_path)
         file_name = os.path.basename(file_path)
@@ -120,6 +124,7 @@ class IngestionPipeline:
                 document_id=doc_id,
                 text=text,
                 source=file_name,
+                user_id=user_id,
                 page_number=0,
                 start_time=float(seg["start"]),
                 end_time=float(seg["end"])
@@ -135,7 +140,7 @@ class IngestionPipeline:
                 documents=docs_to_save,
                 metadatas=metas_to_save
             )
-            print(f"Saved {len(ids_to_save)} chunks to persistent storage.")
+            logger.info("Saved %d chunks to persistent storage.", len(ids_to_save))
 
         return {
             "status": "success",

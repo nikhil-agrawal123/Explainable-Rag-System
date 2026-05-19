@@ -33,6 +33,7 @@ class ChunkRecord(BaseModel):
     text: str
     source: str
     page_number: int = 0
+    user_id: str = ""
     start_time: Optional[float] = None
     end_time: Optional[float] = None 
     
@@ -47,6 +48,7 @@ class ChunkRecord(BaseModel):
             "chunk_id": self.chunk_id,
             "source": self.source,
             "page": self.page_number,
+            "user_id": self.user_id,
             "domain": json.dumps(self.metadata.domain),
             "entities": json.dumps(self.metadata.entities),
             "relations": json.dumps([r.to_list() for r in self.metadata.relations]) 
