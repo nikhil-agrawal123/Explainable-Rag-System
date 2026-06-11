@@ -6,6 +6,7 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    runtime: nvidia
     restart: unless-stopped
 
   dataforge:
@@ -25,6 +26,7 @@ services:
     depends_on:
       - ollama
     restart: unless-stopped
+
 
 volumes:
   ollama_data:

@@ -1,4 +1,5 @@
 import os
+import logging
 
 from fastapi import APIRouter, Depends
 
@@ -11,8 +12,14 @@ from app.pipeline.stage_5_generation import GenerationEngine
 from app.pipeline.stage_6_scoring import TrustScorer
 from app.utils.visualizer import GraphVisualizer
 
-router = APIRouter(tags=["RAG Pipeline"])
+# from transformers import pipeline
 
+router = APIRouter(tags=["RAG Pipeline"])
+"""
+awaiting access to use the Meta Llama-Prompt-Guard-2-22M model for query classification. This will be integrated into the full_pipeline endpoint to ensure that user queries are checked for malicious content before processing. The classifier will help enhance the security of the system by preventing harmful queries from being executed.
+"""
+# classifier = pipeline("text-classification", model="meta-llama/Llama-Prompt-Guard-2-22M", device=0)
+logger = logging.getLogger(__name__)
 
 def _viz_dir(user_id: str) -> str:
     return os.path.join(settings.VIZ_DIR, user_id)
@@ -81,6 +88,14 @@ async def full_pipeline(
     try:
         if not query or len(query.strip()) == 0:
             return {"error": "Query cannot be empty."}
+        if len(query) > 1000:
+            return {"error": "Query is too long. Please limit to 1000 characters."}
+
+        # if classifier(query) == 'MALICIOUS':
+        #     logger.warning(f"Malicious query detected for user {current_user.user_id}: {query}")
+        #     return {"error": "Query flagged as malicious content."}
+        # else:
+        #     logger.info(f"Query passed safety check for user {current_user.user_id}.")
 
         decomposition_pipeline = QueryDecompositionPipeline()
         retrieval_pipeline = MultiQueryRetrievalPipeline()
@@ -91,6 +106,7 @@ async def full_pipeline(
 
         chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5, user_id=current_user.user_id)
         if not chunks:
+            logger.info(f"No relevant information found for query: {query}")
             return {"error": "No relevant information found for the query."}
 
         kg = graph_builder.build_graph(chunks)

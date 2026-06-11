@@ -19,3 +19,4 @@ fastapi==0.136.1
 pytest==9.0.2
 python-jose[cryptography]==3.3.0
 python-multipart
+transformers==5.9.0
