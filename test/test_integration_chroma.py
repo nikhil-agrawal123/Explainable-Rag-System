@@ -1,8 +1,25 @@
 import asyncio
+import json
 import uuid
 
 from app.db.chroma_client import ChromaClient
+from app.models.schemas import ExtractedMetadata, Relation
 from app.pipeline.stage_1_ingestion import IngestionPipeline
+
+
+class LocalTestMetadataExtractor:
+    """Deterministic metadata so this test stays independent of Ollama.
+
+    Without it the real extractor swallows connection errors, returns empty
+    metadata, and the assertions below pass on a document that is useless.
+    """
+
+    def extract_metadata(self, text):
+        return ExtractedMetadata(
+            entities=["Entity_A"],
+            relations=[Relation(subject="A", predicate="rel", object="B")],
+            domain=["Testing"],
+        )
 
 
 class LocalTestEmbeddingFunction:
@@ -28,6 +45,7 @@ def test_pdf_ingestion_into_real_chroma(sample_pdf):
 
     pipeline = IngestionPipeline()
     pipeline.db_collection = collection
+    pipeline.metadata_extractor = LocalTestMetadataExtractor()
 
     try:
         result = asyncio.run(pipeline.process_document(str(sample_pdf)))
@@ -35,6 +53,10 @@ def test_pdf_ingestion_into_real_chroma(sample_pdf):
         contents = collection.get()
         ids = contents.get("ids") or []
         assert ids, "No ids returned from Chroma collection after ingestion"
+
+        stored = (contents.get("metadatas") or [])[0]
+        assert json.loads(stored["entities"]) == ["Entity_A"]
+        assert json.loads(stored["relations"]) == [["A", "rel", "B"]]
     finally:
         try:
             client.delete_collection(name=coll_name)

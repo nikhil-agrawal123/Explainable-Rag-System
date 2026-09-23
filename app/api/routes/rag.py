@@ -51,7 +51,7 @@ async def visualize_graph(
     graph_builder = KnowledgeGraphBuilder()
     decomposition_pipeline = QueryDecompositionPipeline()
     sub_queries = decomposition_pipeline.decompose_query(query)
-    chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5, user_id=current_user.user_id)
+    chunks = retrieval_pipeline.retrieve_hybrid(sub_queries, k_per_query=5, user_id=current_user.user_id)
 
     graph_builder.build_graph(chunks)
     graph_builder.prune_graph(min_edge_weight=1)
