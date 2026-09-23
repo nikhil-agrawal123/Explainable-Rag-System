@@ -11,14 +11,30 @@ logger = logging.getLogger(__name__)
 
 from app.models.schemas import ChunkRecord
 from app.pipeline.chuncking import Chuncking
+from app.pipeline.metadata import MetadataExtractor
 from app.db.chroma_client import ChromaClient
 
+
+
+def _reject_if_extraction_failed(metas: list[dict], doc_id: str) -> None:
+    """Refuse to store a document whose metadata extraction produced nothing.
+
+    llm.py catches LLM errors and returns [], so an unreachable Ollama yields empty
+    entities and relations for every chunk. Retrieval trusts whatever ingest stored
+    and never re-extracts, so saving that would bake an empty graph in permanently.
+    """
+    if not any(m.get("entities", "[]") != "[]" or m.get("relations", "[]") != "[]" for m in metas):
+        raise ValueError(
+            f"Metadata extraction produced nothing for any chunk of {doc_id} - "
+            "check that Ollama is reachable and the model is pulled. Document not saved."
+        )
 
 
 class IngestionPipeline:
     def __init__(self):
         self.db_collection = ChromaClient.get_collection()
         self.chunker = Chuncking()
+        self.metadata_extractor = MetadataExtractor()
         self.model = None  # Lazy-loaded only for audio ingestion
 
     def _get_audio_model(self):
@@ -65,31 +81,37 @@ class IngestionPipeline:
         if not text_chunks:
             raise ValueError("No chunks could be generated from PDF content.")
 
-        ids_to_save, docs_to_save, metas_to_save = [], [], []
+        def _build_records():
+            ids, docs, metas = [], [], []
+            for index, chunk in enumerate(text_chunks):
+                chunk_text = (chunk.page_content or "").strip()
+                if not chunk_text:
+                    continue
 
-        for index, chunk in enumerate(text_chunks):
-            chunk_text = (chunk.page_content or "").strip()
-            if not chunk_text:
-                continue
+                chunk_id = f"{doc_id}_CH{index}"
+                record = ChunkRecord(
+                    chunk_id=chunk_id,
+                    document_id=doc_id,
+                    text=chunk_text,
+                    source=filename,
+                    user_id=user_id,
+                    start_time=None,
+                    end_time=None,
+                    page_number=chunk.metadata.get("page", 0),
+                    metadata=self.metadata_extractor.extract_metadata(chunk_text),
+                )
+                ids.append(record.chunk_id)
+                docs.append(record.text)
+                metas.append(record.to_persistence_payload())
+            return ids, docs, metas
 
-            chunk_id = f"{doc_id}_CH{index}"
-            record = ChunkRecord(
-                chunk_id=chunk_id,
-                document_id=doc_id,
-                text=chunk_text,
-                source=filename,
-                user_id=user_id,
-                start_time=None,
-                end_time=None,
-                page_number=chunk.metadata.get("page", 0),
-                metadata={}
-            )
-            ids_to_save.append(record.chunk_id)
-            docs_to_save.append(record.text)
-            metas_to_save.append(record.to_persistence_payload())
+        logger.info("Extracting metadata for %d chunks of %s...", len(text_chunks), doc_id)
+        ids_to_save, docs_to_save, metas_to_save = await loop.run_in_executor(None, _build_records)
 
         if not ids_to_save:
             raise ValueError("PDF parsed, but produced only empty chunks.")
+
+        _reject_if_extraction_failed(metas_to_save, doc_id)
 
         # Upsert instead of add — safe for re-ingestion
         await loop.run_in_executor(
@@ -127,7 +149,8 @@ class IngestionPipeline:
                 user_id=user_id,
                 page_number=0,
                 start_time=float(seg["start"]),
-                end_time=float(seg["end"])
+                end_time=float(seg["end"]),
+                metadata=self.metadata_extractor.extract_metadata(text),
             )
 
             ids_to_save.append(record.chunk_id)
@@ -135,6 +158,7 @@ class IngestionPipeline:
             metas_to_save.append(record.to_persistence_payload())
 
         if ids_to_save:
+            _reject_if_extraction_failed(metas_to_save, doc_id)
             self.db_collection.add(
                 ids=ids_to_save,
                 documents=docs_to_save,
