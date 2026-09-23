@@ -17,12 +17,6 @@ from app.db.chroma_client import ChromaClient
 
 
 def _reject_if_extraction_failed(metas: list[dict], doc_id: str) -> None:
-    """Refuse to store a document whose metadata extraction produced nothing.
-
-    llm.py catches LLM errors and returns [], so an unreachable Ollama yields empty
-    entities and relations for every chunk. Retrieval trusts whatever ingest stored
-    and never re-extracts, so saving that would bake an empty graph in permanently.
-    """
     if not any(m.get("entities", "[]") != "[]" or m.get("relations", "[]") != "[]" for m in metas):
         raise ValueError(
             f"Metadata extraction produced nothing for any chunk of {doc_id} - "

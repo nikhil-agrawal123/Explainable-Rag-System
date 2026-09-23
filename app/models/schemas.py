@@ -19,6 +19,22 @@ class ExtractedMetadata(BaseModel):
     entities: List[str] = Field(default_factory=list, description="Key entities found in the chunk")
     relations: List[Relation] = Field(default_factory=list, description="Structured knowledge triples")
     domain: List[str] = Field(default_factory=lambda: ["General"], description="The knowledge domain (e.g., 'Probability Theory')")
+
+    @classmethod
+    def from_persistence_payload(cls, payload: dict) -> "ExtractedMetadata":
+        """Inverse of ChunkRecord.to_persistence_payload — reads back what ingestion stored."""
+        def _load(key, default):
+            try:
+                return json.loads(payload.get(key) or "null") or default
+            except (json.JSONDecodeError, TypeError):
+                return default
+
+        return cls(
+            entities=_load("entities", []),
+            relations=[Relation(subject=r[0], predicate=r[1], object=r[2])
+                       for r in _load("relations", []) if len(r) == 3],
+            domain=_load("domain", ["General"]),
+        )
 # --- 3. INGESTION MODELS (API Input/Output) ---
 class ProcessingStats(BaseModel):
     file_name: str
