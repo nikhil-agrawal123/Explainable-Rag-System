@@ -52,6 +52,7 @@ class ChunkRecord(BaseModel):
     user_id: str = ""
     start_time: Optional[float] = None
     end_time: Optional[float] = None 
+    rerank_score: Optional[float] = None  
     
     metadata: ExtractedMetadata = Field(default_factory=ExtractedMetadata)
 

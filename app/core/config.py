@@ -42,9 +42,11 @@ class Settings(BaseSettings):
 
     # Ollama (Local LLM)
     OLLAMA_HOST: Optional[str] = Field(default=os.getenv("OLLAMA_HOST"))
-    OLLAMA_DOMAIN_MODEL: str = Field(default="qwen3.5:4b")
-    OLLAMA_DOMAIN_MODEL_SMALL: str = Field(default="qwen3.5:0.8b")
-    OLLAMA_EMBEDDING_MODEL: str = Field(default="qwen3-embedding:8b")
+    OLLAMA_DOMAIN_MODEL: str = Field(default="qwen3.5:0.8b")
+    OLLAMA_EMBEDDING_MODEL: str = Field(default="qwen3-embedding:0.6b")
+
+    # Cross-encoder reranker (HuggingFace, runs locally)
+    RERANKER_MODEL: str = Field(default="BAAI/bge-reranker-v2-m3")
 
     # OpenAI
     OPENAI_API_KEY: Optional[str] = Field(default=None)

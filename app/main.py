@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.endpoints import router as api_router
 from app.db.chroma_client import ChromaClient
+from app.pipeline.reranker import load_reranker
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,10 @@ async def lifespan(app: FastAPI):
         logger.info("   Storage: %s", settings.CHROMA_PERSIST_DIR)
     except Exception as e:
         logger.critical("Database not accessible. %s", e)
+    try:
+        load_reranker()
+    except Exception as e:
+        logger.critical("Reranker failed to load. %s", e)
     yield
     # ── Shutdown (add cleanup here if needed) ──
 

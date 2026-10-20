@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from app.api.auth import AuthenticatedUser, get_current_user
 from app.core.config import settings
 from app.pipeline.stage_2_decomposition import QueryDecompositionPipeline
+from app.pipeline.reranker import rerank
 from app.pipeline.stage_3_retrieval import MultiQueryRetrievalPipeline
 from app.pipeline.stage_4_local_graph import KnowledgeGraphBuilder
 from app.pipeline.stage_5_generation import GenerationEngine
@@ -31,6 +32,7 @@ async def query_rag(
         decomposition_pipeline = QueryDecompositionPipeline()
         sub_queries = decomposition_pipeline.decompose_query(query)
         chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5, user_id=current_user.user_id)
+        chunks = rerank(query, chunks)
         return {
             "original_query": query,
             "sub_queries": sub_queries,
@@ -52,6 +54,7 @@ async def visualize_graph(
     decomposition_pipeline = QueryDecompositionPipeline()
     sub_queries = decomposition_pipeline.decompose_query(query)
     chunks = retrieval_pipeline.retrieve_hybrid(sub_queries, k_per_query=5, user_id=current_user.user_id)
+    chunks = rerank(query, chunks)
 
     graph_builder.build_graph(chunks)
     graph_builder.prune_graph(min_edge_weight=1)
@@ -90,6 +93,7 @@ async def full_pipeline(
         sub_queries = decomposition_pipeline.decompose_query(query)
 
         chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5, user_id=current_user.user_id)
+        chunks = rerank(query, chunks)
         if not chunks:
             return {"error": "No relevant information found for the query."}
 
@@ -138,6 +142,7 @@ async def score_trust(
         retrieval_pipeline = MultiQueryRetrievalPipeline()
         sub_queries = decomposition_pipeline.decompose_query(query)
         chunks = retrieval_pipeline.retrieve_documents(sub_queries, k_per_query=5, user_id=current_user.user_id)
+        chunks = rerank(query, chunks)
 
         if not chunks:
             return {"error": "No relevant documents found to score trust."}

@@ -145,3 +145,4 @@ def test_bm25_index_is_reused_until_the_corpus_changes():
     builds = [c for c in collection.calls if c["include"] == ["documents"]]
     assert len(builds) == 2, "ingesting a document must invalidate the index"
     assert "DOC_CH5" in {c.chunk_id for c in chunks}
+
